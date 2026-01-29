@@ -416,3 +416,33 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# --- Visual Studio / .NET ---
+.vs/
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache
+*.log
+
+# --- Node / React ---
+node_modules/
+dist/
+build/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- MAUI / Mobile ---
+**/Platforms/**/bin/
+**/Platforms/**/obj/
+*.keystore
+*.jks
+
+# --- Secrets / Env ---
+.env
+.env.*
+appsettings.*.json
+!appsettings.Development.json
