@@ -37,6 +37,15 @@ dotnet ef migrations add InitialIdentity --project src/MedicalRecords.Infrastruc
 dotnet ef database update --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
 ```
 
+### 5. Phase 2 - Profiles Migration
+
+După implementarea fazei 2 (profiluri + auth), poți crea o nouă migrare pentru profiluri:
+
+```bash
+dotnet ef migrations add AddProfiles --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
+dotnet ef database update --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
+```
+
 ### 5. Run the API
 
 ```bash
