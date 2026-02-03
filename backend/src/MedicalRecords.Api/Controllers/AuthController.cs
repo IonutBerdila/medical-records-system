@@ -1,4 +1,5 @@
 using MedicalRecords.Application.Auth;
+using MedicalRecords.Infrastructure.Auth;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MedicalRecords.Api.Controllers;
@@ -21,8 +22,15 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        var result = await _authService.RegisterAsync(request);
-        return CreatedAtAction(nameof(Register), result);
+        try
+        {
+            var result = await _authService.RegisterAsync(request);
+            return CreatedAtAction(nameof(Register), result);
+        }
+        catch (AuthValidationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>
@@ -32,8 +40,16 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var result = await _authService.LoginAsync(request);
-        return Ok(result);
+        try
+        {
+            var result = await _authService.LoginAsync(request);
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Credentiale invalide sau utilizator inexistent
+            return Unauthorized(new { message = ex.Message });
+        }
     }
 }
 

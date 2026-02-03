@@ -37,6 +37,18 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+// CORS pentru clientul web (Vite)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("WebClient", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 // Add Authorization + role-based policies
 builder.Services.AddAuthorization(options =>
 {
@@ -81,6 +93,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("WebClient");
 
 app.UseAuthentication();
 app.UseAuthorization();

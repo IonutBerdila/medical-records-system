@@ -39,13 +39,13 @@ public class AuthService : IAuthService
     {
         if (!AllowedRoles.Contains(req.Role))
         {
-            throw new InvalidOperationException("Rol invalid. Roluri permise: Patient, Doctor, Pharmacy, Admin.");
+            throw new AuthValidationException("Rol invalid. Roluri permise: Patient, Doctor, Pharmacy, Admin.");
         }
 
         var existingUser = await _userManager.FindByEmailAsync(req.Email);
         if (existingUser is not null)
         {
-            throw new InvalidOperationException("Există deja un utilizator cu acest email.");
+            throw new AuthValidationException("Există deja un utilizator cu acest email.");
         }
 
         var user = new ApplicationUser
@@ -60,14 +60,14 @@ public class AuthService : IAuthService
         if (!createResult.Succeeded)
         {
             var errors = string.Join("; ", createResult.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Eroare la crearea utilizatorului: {errors}");
+            throw new AuthValidationException(errors);
         }
 
         var roleResult = await _userManager.AddToRoleAsync(user, req.Role);
         if (!roleResult.Succeeded)
         {
             var errors = string.Join("; ", roleResult.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Eroare la asignarea rolului: {errors}");
+            throw new AuthValidationException(errors);
         }
 
         // Creează profilul în funcție de rol
