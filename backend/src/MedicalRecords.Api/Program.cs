@@ -4,9 +4,18 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MedicalRecords.Application.Auth;
+using MedicalRecords.Application.Consent;
+using MedicalRecords.Application.Entries;
+using MedicalRecords.Application.Prescriptions;
+using MedicalRecords.Application.Records;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Auth;
+using MedicalRecords.Infrastructure.Consent;
 using MedicalRecords.Infrastructure.Data;
+using MedicalRecords.Infrastructure.Entries;
+using MedicalRecords.Infrastructure.Prescriptions;
+using MedicalRecords.Infrastructure.Records;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,6 +69,10 @@ builder.Services.AddAuthorization(options =>
 
 // Dependency Injection
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IConsentService, ConsentService>();
+builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
+builder.Services.AddScoped<IMedicalEntryService, MedicalEntryService>();
+builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 
 // Add Controllers
 builder.Services.AddControllers();
@@ -67,6 +80,36 @@ builder.Services.AddControllers();
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "MedicalRecords.Api", Version = "v1" });
+
+    // JWT Bearer in Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter: Bearer {your JWT token}"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 

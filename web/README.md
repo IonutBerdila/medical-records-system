@@ -47,16 +47,23 @@ Aplicația va porni pe `http://localhost:5173`.
 
 - `/` – Splash (redirect automat către `/auth`)
 - `/auth` – ecran intermediar cu butoane **Sign Up** / **Log In**
-- `/login` – formular de autentificare
-- `/signup` – pasul 1 de înregistrare (apelează `POST /api/auth/register`)
-- `/signup/extra` – pasul 2 cosmetic (profil, salvat doar în `localStorage`)
-- `/dashboard` – dashboard protejat (în funcție de rol)
-- `/me` – pagină protejată cu detalii despre utilizator + JSON de debug
+- `/login`, `/signup`, `/signup/extra` – autentificare și înregistrare
+- `/dashboard` – dashboard protejat (quick actions în funcție de rol)
+- `/me` – profil utilizator + JSON de debug
+
+### Phase 3 – Pacient
+
+- `/record` – fișa medicală (vizualizare + editare)
+- `/timeline` – timeline intrări medicale
+- `/prescriptions` – listă rețete
+- `/share` – acordare/revocare acces doctorilor
+
+### Phase 3 – Doctor
+
+- `/doctor/patients` – listă pacienți cu consimțământ activ
+- `/doctor/patients/:id` – detalii pacient, adăugare intrări și rețete
 
 ## Integrare API
 
-Aplicația folosește endpoint din backend:
-
-- `POST /api/auth/register`
-- `POST /api/auth/login`
-- `GET /api/me`
+- Auth: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/me`
+- Phase 3: `GET/PUT /api/records/me`, `GET /api/entries/me`, `GET /api/prescriptions/me`, `GET/POST /api/consent/*`, `GET /api/doctor/patients`, `GET/POST /api/patients/:id/*`

@@ -1,23 +1,27 @@
 # Medical Records Backend
 
-ASP.NET Core 8.0 Web API with Clean Architecture.
+Un proiect ASP.NET Core 8 + EF Core + PostgreSQL pentru sistemul de fișe medicale.
 
-## Prerequisites
+## Ce am nevoie instalat
 
-- .NET 8.0 SDK
-- Docker (for PostgreSQL)
-- Entity Framework Core tools (`dotnet tool install --global dotnet-ef`)
+- .NET 8 SDK
+- Docker (pentru PostgreSQL)
+- Unelte EF Core:
 
-## Quick Start
+```bash
+dotnet tool install --global dotnet-ef
+```
 
-### 1. Start the Database
+## Cum pornesc backend‑ul de la zero
+
+1. **Porneșc baza de date în Docker**
 
 ```bash
 cd ..\infra
 docker compose up -d
 ```
 
-### 2. Restore and Build
+2. **Reinstalez pachetele și compil proiectul**
 
 ```bash
 cd ..\backend
@@ -25,51 +29,86 @@ dotnet restore
 dotnet build
 ```
 
-### 3. Create Initial Migration
+3. **Creez migrarea inițială (Identity)** – doar prima dată
 
 ```bash
-dotnet ef migrations add InitialIdentity --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
+dotnet ef migrations add InitialIdentity ^
+  --project src/MedicalRecords.Infrastructure ^
+  --startup-project src/MedicalRecords.Api
 ```
 
-### 4. Apply Migration to Database
+4. **Aplic migrarea inițială în baza de date**
 
 ```bash
-dotnet ef database update --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
+dotnet ef database update ^
+  --project src/MedicalRecords.Infrastructure ^
+  --startup-project src/MedicalRecords.Api
 ```
 
-### 5. Phase 2 - Profiles Migration
-
-După implementarea fazei 2 (profiluri + auth), poți crea o nouă migrare pentru profiluri:
+5. **Adaug migrarea pentru profiluri (Phase 2)** – după ce termin faza 2
 
 ```bash
-dotnet ef migrations add AddProfiles --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
-dotnet ef database update --project src/MedicalRecords.Infrastructure --startup-project src/MedicalRecords.Api
+dotnet ef migrations add AddProfiles ^
+  --project src/MedicalRecords.Infrastructure ^
+  --startup-project src/MedicalRecords.Api
+
+dotnet ef database update ^
+  --project src/MedicalRecords.Infrastructure ^
+  --startup-project src/MedicalRecords.Api
 ```
 
-### 5. Run the API
+6. **Adaug migrarea pentru fișe medicale / rețete / consimțământ (Phase 3)**
+
+```bash
+dotnet ef migrations add Phase3_MedicalCore ^
+  --project src/MedicalRecords.Infrastructure ^
+  --startup-project src/MedicalRecords.Api
+
+dotnet ef database update ^
+  --project src/MedicalRecords.Infrastructure ^
+  --startup-project src/MedicalRecords.Api
+```
+
+> Dacă EF îmi spune „No migrations were applied”, înseamnă că baza de date este deja la zi.
+
+7. **Porneșc API‑ul**
 
 ```bash
 cd src\MedicalRecords.Api
 dotnet run
 ```
 
-### 6. Access the API
+În consolă văd adresa la care ascultă API‑ul, de tipul `http://localhost:5119`. Această adresă o folosesc și în front‑end (`VITE_API_BASE_URL`).
 
-- **Swagger UI**: http://localhost:5000/swagger (or check console for actual port)
-- **Health Check**: http://localhost:5000/api/health
+8. **Deschid Swagger pentru test rapid**
 
-## Project Structure
+Deschid în browser adresa HTTP afișată în consolă, de ex:
 
-```
-backend/
-├── MedicalRecords.sln
-└── src/
-    ├── MedicalRecords.Api/          # ASP.NET Core Web API
-    ├── MedicalRecords.Application/  # Application layer (use cases)
-    ├── MedicalRecords.Domain/       # Domain entities
-    └── MedicalRecords.Infrastructure/ # Data access, EF Core
-```
+- `http://localhost:5119/swagger`
 
-## Configuration
+De aici pot testa:
 
-Connection string and JWT settings are in `appsettings.Development.json`.
+- înregistrare / login (`/api/auth/...`)
+- `/api/me`
+- endpoint‑urile din faza 3:
+  - `/api/records/me`, `/api/entries/me`, `/api/prescriptions/me`
+  - `/api/consent/*`, `/api/doctor/patients`
+  - `/api/patients/{patientUserId}/record|entries|prescriptions`
+
+## Alte note
+
+- Structura proiectului:
+
+  ```text
+  backend/
+    MedicalRecords.sln
+    src/
+      MedicalRecords.Api/
+      MedicalRecords.Application/
+      MedicalRecords.Domain/
+      MedicalRecords.Infrastructure/
+  ```
+
+- Conexiunea la baza de date și setările pentru JWT le editez în  
+  `src/MedicalRecords.Api/appsettings.Development.json`.
+

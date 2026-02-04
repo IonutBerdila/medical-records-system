@@ -1,18 +1,20 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '../ui/Layout';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { useAuth } from '../app/auth/AuthContext';
 import type { UserRole } from '../app/auth/types';
 
-const actionsByRole: Record<UserRole, { label: string }[]> = {
+const actionsByRole: Record<UserRole, { label: string; path?: string }[]> = {
   Patient: [
-    { label: 'My Medical Record' },
-    { label: 'Prescriptions' }
+    { label: 'Fișa medicală', path: '/record' },
+    { label: 'Timeline', path: '/timeline' },
+    { label: 'Rețete', path: '/prescriptions' },
+    { label: 'Acordare acces', path: '/share' }
   ],
   Doctor: [
-    { label: 'Patients' },
-    { label: 'Create Prescription' }
+    { label: 'Pacienții mei', path: '/doctor/patients' }
   ],
   Pharmacy: [
     { label: 'Scan QR' },
@@ -26,6 +28,7 @@ const actionsByRole: Record<UserRole, { label: string }[]> = {
 
 export const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const primaryRole = user?.roles[0] ?? 'Patient';
   const actions = actionsByRole[primaryRole];
 
@@ -72,20 +75,14 @@ export const Dashboard: React.FC = () => {
               <Button
                 key={action.label}
                 variant="secondary"
-                className="cursor-not-allowed opacity-70"
-                disabled
+                onClick={action.path ? () => navigate(action.path!) : undefined}
+                disabled={!action.path}
+                className={!action.path ? 'cursor-not-allowed opacity-70' : ''}
               >
                 {action.label}
               </Button>
             ))}
           </div>
-        </Card>
-
-        <Card className="p-4 text-[11px] text-mutedText">
-          <p>
-            Aceasta este doar o interfață demo pentru testarea rapidă a autentificării și a rolurilor.
-            Funcționalitățile medicale vor fi implementate în fazele 3+.
-          </p>
         </Card>
       </div>
     </Layout>

@@ -17,6 +17,11 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 
     public DbSet<PharmacyProfile> PharmacyProfiles => Set<PharmacyProfile>();
 
+    public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
+    public DbSet<MedicalEntry> MedicalEntries => Set<MedicalEntry>();
+    public DbSet<Prescription> Prescriptions => Set<Prescription>();
+    public DbSet<PatientDoctorAccess> PatientDoctorAccesses => Set<PatientDoctorAccess>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -61,6 +66,62 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Phase 3: MedicalRecord — un record per pacient
+        builder.Entity<MedicalRecord>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.PatientUserId).IsUnique();
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.PatientUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // MedicalEntry — intrări pe record; ștergere record șterge intrările
+        builder.Entity<MedicalEntry>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasOne<MedicalRecord>()
+                .WithMany()
+                .HasForeignKey(x => x.RecordId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Prescription
+        builder.Entity<Prescription>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.PatientUserId);
+            entity.HasIndex(x => x.DoctorUserId);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.PatientUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.DoctorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // PatientDoctorAccess (consent)
+        builder.Entity<PatientDoctorAccess>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.PatientUserId, x.DoctorUserId });
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.PatientUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.DoctorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MedicalRecords.Application\MedicalRecords.Application.csproj" />
+    <ProjectReference Include="..\MedicalRecords.Domain\MedicalRecords.Domain.csproj" />
     <ProjectReference Include="..\MedicalRecords.Infrastructure\MedicalRecords.Infrastructure.csproj" />
   </ItemGroup>
 
