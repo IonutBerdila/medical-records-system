@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Layout } from '../ui/Layout';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -61,18 +60,15 @@ export const RecordPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      </Layout>
+      <div className="flex h-32 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
     );
   }
 
   return (
-    <Layout>
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-text">Fișa medicală</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">Fișa medicală</h1>
         <Card className="p-5">
           <form className="flex flex-col gap-4" onSubmit={handleSave}>
             <Input
@@ -106,6 +102,5 @@ export const RecordPage: React.FC = () => {
           </form>
         </Card>
       </div>
-    </Layout>
   );
 };

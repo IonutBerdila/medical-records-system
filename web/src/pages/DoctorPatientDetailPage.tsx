@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Layout } from '../ui/Layout';
-import { Card } from '../ui/Card';
+import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
+import { Tabs } from '../ui/Tabs';
+import { EmptyState } from '../ui/EmptyState';
 import { getPatientRecord } from '../app/records/recordsApi';
 import { getPatientEntries, addPatientEntry } from '../app/entries/entriesApi';
 import { createPatientPrescription } from '../app/prescriptions/prescriptionsApi';
@@ -15,6 +17,10 @@ import type { CreatePrescriptionRequest } from '../app/prescriptions/types';
 
 const ENTRY_TYPES = ['Diagnosis', 'Visit', 'Note', 'LabResult'];
 
+function initials(id: string): string {
+  return id.slice(0, 2).toUpperCase();
+}
+
 export const DoctorPatientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -23,6 +29,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
   const [record, setRecord] = useState<MedicalRecordDto | null>(null);
   const [entries, setEntries] = useState<MedicalEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
   const [entryForm, setEntryForm] = useState<CreateMedicalEntryRequest>({
     type: 'Note',
     title: '',
@@ -38,19 +45,19 @@ export const DoctorPatientDetailPage: React.FC = () => {
 
   const load = () => {
     if (!patientUserId) return;
-    Promise.all([
-      getPatientRecord(patientUserId),
-      getPatientEntries(patientUserId)
-    ])
+    Promise.all([getPatientRecord(patientUserId), getPatientEntries(patientUserId)])
       .then(([r, e]) => {
         setRecord(r);
         setEntries(e);
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         const msg =
-          err?.response?.data?.message || err?.response?.data?.title || err?.message || 'Eroare la încărcare';
+          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+          (err as { response?: { data?: { title?: string } }; message?: string })?.response?.data?.title ||
+          (err as { message?: string })?.message ||
+          'Eroare la încărcare';
         toast.error(msg);
-        if (err?.response?.status === 403) navigate('/doctor/patients');
+        if ((err as { response?: { status?: number } })?.response?.status === 403) navigate('/doctor/patients');
       })
       .finally(() => setLoading(false));
   };
@@ -68,9 +75,13 @@ export const DoctorPatientDetailPage: React.FC = () => {
       toast.success('Intrare adăugată.');
       setEntryForm({ type: 'Note', title: '', description: '' });
       load();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg =
-        err?.response?.data?.message || err?.response?.data?.title || err?.message || 'Eroare la adăugare';
+        (err as { response?: { data?: { message?: string; title?: string } }; message?: string })?.response?.data
+          ?.message ||
+        (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
+        (err as { message?: string })?.message ||
+        'Eroare la adăugare';
       toast.error(msg);
     } finally {
       setSubmittingEntry(false);
@@ -86,134 +97,247 @@ export const DoctorPatientDetailPage: React.FC = () => {
       toast.success('Rețetă creată.');
       setPrescriptionForm({ medicationName: '', dosage: '', instructions: '' });
       load();
-    } catch (err: any) {
+    } catch (err: unknown) {
       const msg =
-        err?.response?.data?.message || err?.response?.data?.title || err?.message || 'Eroare la creare';
+        (err as { response?: { data?: { message?: string; title?: string } }; message?: string })?.response?.data
+          ?.message ||
+        (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
+        (err as { message?: string })?.message ||
+        'Eroare la creare';
       toast.error(msg);
     } finally {
       setSubmittingPrescription(false);
     }
   };
 
+  const tabItems = [
+    { id: 'overview', label: 'Prezentare generală' },
+    { id: 'timeline', label: 'Timeline' },
+    { id: 'prescriptions', label: 'Rețete' }
+  ];
+
   if (loading) {
     return (
-      <Layout>
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      </Layout>
+      <div className="flex h-48 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="flex flex-col gap-5">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="text-sm text-primary hover:underline"
-            onClick={() => navigate('/doctor/patients')}
-          >
-            ← Pacienți
-          </button>
-        </div>
-        <h1 className="text-2xl font-semibold text-text">Detalii pacient</h1>
-
-        {record && (
-          <Card className="p-4">
-            <h2 className="text-sm font-semibold text-text mb-2">Fișă medicală</h2>
-            <p className="text-sm text-mutedText">
-              Grupă: {record.bloodType || '—'} · Alergii: {record.allergies || '—'}
-            </p>
-            {record.emergencyContactName && (
-              <p className="text-sm text-mutedText">
-                Contact urgență: {record.emergencyContactName} {record.emergencyContactPhone}
-              </p>
-            )}
-          </Card>
-        )}
-
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-text mb-3">Adaugă intrare</h2>
-          <form className="flex flex-col gap-3" onSubmit={handleAddEntry}>
-            <label className="text-sm text-mutedText">
-              Tip
-              <select
-                className="ml-2 rounded-full border border-borderSoft/80 bg-white px-3 py-1.5 text-sm"
-                value={entryForm.type}
-                onChange={(e) => setEntryForm({ ...entryForm, type: e.target.value })}
-              >
-                {ENTRY_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </label>
-            <Input
-              label="Titlu"
-              value={entryForm.title}
-              onChange={(e) => setEntryForm({ ...entryForm, title: e.target.value })}
-              required
-            />
-            <Input
-              label="Descriere (opțional)"
-              value={entryForm.description ?? ''}
-              onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })}
-            />
-            <Button type="submit" loading={submittingEntry}>
-              Adaugă intrare
-            </Button>
-          </form>
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-text mb-3">Creează rețetă</h2>
-          <form className="flex flex-col gap-3" onSubmit={handleCreatePrescription}>
-            <Input
-              label="Medicament"
-              value={prescriptionForm.medicationName}
-              onChange={(e) => setPrescriptionForm({ ...prescriptionForm, medicationName: e.target.value })}
-              required
-            />
-            <Input
-              label="Doza (opțional)"
-              value={prescriptionForm.dosage ?? ''}
-              onChange={(e) => setPrescriptionForm({ ...prescriptionForm, dosage: e.target.value })}
-            />
-            <Input
-              label="Instrucțiuni (opțional)"
-              value={prescriptionForm.instructions ?? ''}
-              onChange={(e) => setPrescriptionForm({ ...prescriptionForm, instructions: e.target.value })}
-            />
-            <Button type="submit" loading={submittingPrescription}>
-              Creează rețetă
-            </Button>
-          </form>
-        </Card>
-
-        <div>
-          <h2 className="mb-2 text-sm font-semibold text-text">Intrări timeline</h2>
-          {entries.length === 0 ? (
-            <p className="text-sm text-mutedText">Nicio intrare încă.</p>
-          ) : (
-            <div className="flex flex-col gap-2">
-              {entries.map((e) => (
-                <Card key={e.id} className="p-3">
-                  <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                    {e.type}
-                  </span>
-                  <span className="ml-2 font-medium">{e.title}</span>
-                  <span className="ml-2 text-xs text-mutedText">
-                    {new Date(e.createdAtUtc).toLocaleDateString('ro-RO')}
-                  </span>
-                  {e.description && (
-                    <p className="mt-1 text-sm text-mutedText">{e.description}</p>
-                  )}
-                </Card>
-              ))}
-            </div>
-          )}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <button
+          type="button"
+          className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900"
+          onClick={() => navigate('/doctor/patients')}
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Pacienți
+        </button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setActiveTab('prescriptions')}>
+            Adaugă rețetă
+          </Button>
+          <Button onClick={() => setActiveTab('timeline')}>
+            + Adaugă intrare medicală
+          </Button>
         </div>
       </div>
-    </Layout>
+
+      {/* Patient summary card (ca referință) */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-6 py-5">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-xl font-semibold text-teal-700">
+              {initials(patientUserId)}
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900">Pacient</h1>
+              <p className="text-sm text-slate-600">ID: {patientUserId}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {record?.bloodType && (
+                  <Badge variant="error">Grupă: {record.bloodType}</Badge>
+                )}
+                {record?.allergies && (
+                  <Badge variant="warning">Alergie: {record.allergies}</Badge>
+                )}
+                <Badge variant="success">Pacient activ</Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Tabs tabs={tabItems} activeId={activeTab} onChange={setActiveTab} />
+
+      {activeTab === 'overview' && (
+        <Card>
+          <CardHeader>
+            <h2 className="text-xl font-semibold text-slate-900">Fișă medicală</h2>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {record ? (
+              <>
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-700">Grupă sanguină:</span> {record.bloodType || '—'}
+                </p>
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-700">Alergii:</span> {record.allergies || '—'}
+                </p>
+                {(record.emergencyContactName || record.emergencyContactPhone) && (
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-700">Contact urgență:</span>{' '}
+                    {record.emergencyContactName} {record.emergencyContactPhone}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">Nu există date de fișă medicală.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === 'timeline' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-slate-900">Adaugă intrare medicală</h2>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleAddEntry}>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-slate-700">
+                    Tip <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    value={entryForm.type}
+                    onChange={(e) => setEntryForm({ ...entryForm, type: e.target.value })}
+                  >
+                    {ENTRY_TYPES.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Titlu"
+                    value={entryForm.title}
+                    onChange={(e) => setEntryForm({ ...entryForm, title: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Descriere (opțional)"
+                    value={entryForm.description ?? ''}
+                    onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })}
+                  />
+                </div>
+                <div className="flex gap-2 sm:col-span-2">
+                  <Button type="submit" loading={submittingEntry}>
+                    Salvează intrare
+                  </Button>
+                  <Button type="button" variant="ghost" onClick={() => setEntryForm({ type: 'Note', title: '', description: '' })}>
+                    Anulează
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div>
+            <h2 className="mb-3 text-xl font-semibold text-slate-900">Intrări timeline</h2>
+            {entries.length === 0 ? (
+              <EmptyState
+                title="Nicio intrare"
+                description="Intrările adăugate aici vor apărea în lista de mai jos."
+              />
+            ) : (
+              <ul className="space-y-2">
+                {entries.map((e) => (
+                  <Card key={e.id} className="p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="info">{e.type}</Badge>
+                      <span className="font-medium text-slate-900">{e.title}</span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(e.createdAtUtc).toLocaleString('ro-RO')}
+                      </span>
+                    </div>
+                    {e.description && (
+                      <p className="mt-2 text-sm text-slate-600">{e.description}</p>
+                    )}
+                  </Card>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'prescriptions' && (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <h2 className="text-xl font-semibold text-slate-900">Creează rețetă</h2>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleCreatePrescription}>
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Medicament"
+                    value={prescriptionForm.medicationName}
+                    onChange={(e) =>
+                      setPrescriptionForm({ ...prescriptionForm, medicationName: e.target.value })
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <Input
+                    label="Doza (opțional)"
+                    value={prescriptionForm.dosage ?? ''}
+                    onChange={(e) => setPrescriptionForm({ ...prescriptionForm, dosage: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Input
+                    label="Instrucțiuni (opțional)"
+                    value={prescriptionForm.instructions ?? ''}
+                    onChange={(e) =>
+                      setPrescriptionForm({ ...prescriptionForm, instructions: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="flex gap-2 sm:col-span-2">
+                  <Button type="submit" loading={submittingPrescription}>
+                    Salvează rețetă
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      setPrescriptionForm({ medicationName: '', dosage: '', instructions: '' })
+                    }
+                  >
+                    Anulează
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+          <EmptyState
+            title="Lista de rețete"
+            description="Rețetele create aici apar în contul pacientului, la secțiunea Rețete. Nu există endpoint pentru listarea rețetelor pacientului din această pagină."
+          />
+        </div>
+      )}
+    </div>
   );
 };

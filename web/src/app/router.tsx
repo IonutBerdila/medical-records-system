@@ -13,8 +13,14 @@ import { PrescriptionsPage } from '../pages/PrescriptionsPage';
 import { ShareAccessPage } from '../pages/ShareAccessPage';
 import { DoctorPatientsPage } from '../pages/DoctorPatientsPage';
 import { DoctorPatientDetailPage } from '../pages/DoctorPatientDetailPage';
+import { PharmacyPage } from '../pages/PharmacyPage';
+import { PharmacyPrescriptionPage } from '../pages/PharmacyPrescriptionPage';
+import { AdminPage } from '../pages/AdminPage';
+import { AdminUsersPage } from '../pages/AdminUsersPage';
+import { AdminAuditPage } from '../pages/AdminAuditPage';
 import { RequireAuth } from './auth/RequireAuth';
 import { RequireRole } from './auth/RequireRole';
+import { AppShell } from '../ui/AppShell';
 
 export const AppRouter: React.FC = () => {
   return (
@@ -29,7 +35,9 @@ export const AppRouter: React.FC = () => {
           path="/me"
           element={
             <RequireAuth>
-              <Me />
+              <AppShell>
+                <Me />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -37,7 +45,9 @@ export const AppRouter: React.FC = () => {
           path="/dashboard"
           element={
             <RequireAuth>
-              <Dashboard />
+              <AppShell>
+                <Dashboard />
+              </AppShell>
             </RequireAuth>
           }
         />
@@ -46,7 +56,9 @@ export const AppRouter: React.FC = () => {
           element={
             <RequireAuth>
               <RequireRole allowedRoles={['Patient']}>
-                <RecordPage />
+                <AppShell>
+                  <RecordPage />
+                </AppShell>
               </RequireRole>
             </RequireAuth>
           }
@@ -56,7 +68,9 @@ export const AppRouter: React.FC = () => {
           element={
             <RequireAuth>
               <RequireRole allowedRoles={['Patient']}>
-                <TimelinePage />
+                <AppShell>
+                  <TimelinePage />
+                </AppShell>
               </RequireRole>
             </RequireAuth>
           }
@@ -66,7 +80,9 @@ export const AppRouter: React.FC = () => {
           element={
             <RequireAuth>
               <RequireRole allowedRoles={['Patient']}>
-                <PrescriptionsPage />
+                <AppShell>
+                  <PrescriptionsPage />
+                </AppShell>
               </RequireRole>
             </RequireAuth>
           }
@@ -76,7 +92,9 @@ export const AppRouter: React.FC = () => {
           element={
             <RequireAuth>
               <RequireRole allowedRoles={['Patient']}>
-                <ShareAccessPage />
+                <AppShell>
+                  <ShareAccessPage />
+                </AppShell>
               </RequireRole>
             </RequireAuth>
           }
@@ -86,7 +104,9 @@ export const AppRouter: React.FC = () => {
           element={
             <RequireAuth>
               <RequireRole allowedRoles={['Doctor']}>
-                <DoctorPatientsPage />
+                <AppShell>
+                  <DoctorPatientsPage />
+                </AppShell>
               </RequireRole>
             </RequireAuth>
           }
@@ -96,7 +116,69 @@ export const AppRouter: React.FC = () => {
           element={
             <RequireAuth>
               <RequireRole allowedRoles={['Doctor']}>
-                <DoctorPatientDetailPage />
+                <AppShell>
+                  <DoctorPatientDetailPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/pharmacy"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Pharmacy']}>
+                <AppShell>
+                  <PharmacyPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/pharmacy/prescription"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Pharmacy']}>
+                <AppShell>
+                  <PharmacyPrescriptionPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Admin']}>
+                <AppShell>
+                  <AdminPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Admin']}>
+                <AppShell>
+                  <AdminUsersPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/audit"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Admin']}>
+                <AppShell>
+                  <AdminAuditPage />
+                </AppShell>
               </RequireRole>
             </RequireAuth>
           }

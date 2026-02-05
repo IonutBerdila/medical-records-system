@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Layout } from '../ui/Layout';
 import { Card } from '../ui/Card';
 import { getMyEntries } from '../app/entries/entriesApi';
 import type { MedicalEntryDto } from '../app/entries/types';
@@ -29,22 +28,19 @@ export const TimelinePage: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      </Layout>
+      <div className="flex h-32 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
     );
   }
 
   return (
-    <Layout>
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-text">Timeline medical</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Timeline medical</h1>
         <div className="flex items-center gap-2">
           <label className="text-sm text-mutedText">Filtru tip:</label>
           <select
-            className="rounded-full border border-borderSoft/80 bg-white px-3 py-1.5 text-sm outline-none focus:border-primary"
+            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-primary"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
@@ -69,7 +65,7 @@ export const TimelinePage: React.FC = () => {
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                       {e.type}
                     </span>
-                    <h3 className="mt-1 font-medium text-text">{e.title}</h3>
+                    <h3 className="mt-1 font-medium text-slate-900">{e.title}</h3>
                     {e.description && (
                       <p className="mt-1 text-sm text-mutedText">{e.description}</p>
                     )}
@@ -83,6 +79,5 @@ export const TimelinePage: React.FC = () => {
           </div>
         )}
       </div>
-    </Layout>
   );
 };

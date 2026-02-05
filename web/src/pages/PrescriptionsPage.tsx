@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Layout } from '../ui/Layout';
 import { Card } from '../ui/Card';
 import { getMyPrescriptions } from '../app/prescriptions/prescriptionsApi';
 import type { PrescriptionDto } from '../app/prescriptions/types';
@@ -22,39 +21,36 @@ export const PrescriptionsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex h-32 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        </div>
-      </Layout>
+      <div className="flex h-32 items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
     );
   }
 
   return (
-    <Layout>
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-text">Rețete</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Rețete</h1>
         {list.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-mutedText">
+          <Card className="p-6 text-center text-sm text-slate-600">
             Nu ai rețete înregistrate.
           </Card>
         ) : (
           <div className="flex flex-col gap-3">
             {list.map((p) => (
               <Card key={p.id} className="p-4">
-                <h3 className="font-medium text-text">{p.medicationName}</h3>
+                <h3 className="font-medium text-slate-900">{p.medicationName}</h3>
                 {p.dosage && (
-                  <p className="text-sm text-mutedText">Doza: {p.dosage}</p>
+                  <p className="text-sm text-slate-600">Doza: {p.dosage}</p>
                 )}
                 {p.instructions && (
-                  <p className="text-sm text-mutedText">{p.instructions}</p>
+                  <p className="text-sm text-slate-600">{p.instructions}</p>
                 )}
                 {p.validUntilUtc && (
-                  <p className="mt-1 text-xs text-mutedText">
+                  <p className="mt-1 text-xs text-slate-600">
                     Valabilă până: {new Date(p.validUntilUtc).toLocaleDateString('ro-RO')}
                   </p>
                 )}
-                <p className="mt-1 text-xs text-mutedText">
+                <p className="mt-1 text-xs text-slate-600">
                   {new Date(p.createdAtUtc).toLocaleDateString('ro-RO')} · Status: {p.status}
                 </p>
               </Card>
@@ -62,6 +58,5 @@ export const PrescriptionsPage: React.FC = () => {
           </div>
         )}
       </div>
-    </Layout>
   );
 };

@@ -4,20 +4,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        primary: '#5B7CFF',
-        primaryDark: '#3E5BDB',
-        background: '#F6F8FF',
-        text: '#0F172A',
-        mutedText: '#64748B',
-        card: '#FFFFFF',
+        primary: '#0d9488',
+        primaryDark: '#0f766e',
+        background: '#f8fafc',
+        text: '#0f172a',
+        mutedText: '#64748b',
+        card: '#ffffff',
         borderSoft: 'rgba(15, 23, 42, 0.08)'
       },
       borderRadius: {
-        xl: '1.25rem', // 20px
-        '3xl': '1.5rem'
+        xl: '0.75rem',
+        '2xl': '1rem'
       },
       boxShadow: {
-        card: '0 18px 45px rgba(15, 23, 42, 0.08)'
+        sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        card: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+        md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
       }
     }
   },

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Layout } from '../ui/Layout';
 import { Card } from '../ui/Card';
+import { RoleBadge } from '../ui/RoleBadge';
 import { useAuth } from '../app/auth/AuthContext';
 
 export const Me: React.FC = () => {
@@ -9,41 +9,33 @@ export const Me: React.FC = () => {
 
   if (!user) {
     return (
-      <Layout>
-        <div className="flex h-full items-center justify-center text-sm text-mutedText">No user loaded.</div>
-      </Layout>
+        <div className="flex h-full items-center justify-center text-sm text-slate-600">No user loaded.</div>
     );
   }
 
   return (
-    <Layout>
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-text">Profile</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">Profil</h1>
 
         <Card className="p-5 flex flex-col gap-3">
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-mutedText mb-1">Email</div>
+            <div className="text-xs uppercase tracking-wider text-slate-500 mb-1">Email</div>
             <div className="text-sm font-medium break-all">{user.email}</div>
           </div>
 
           <div>
-            <div className="text-xs uppercase tracking-[0.18em] text-mutedText mb-1">Roles</div>
+            <div className="text-xs uppercase tracking-wider text-slate-500 mb-1">Roluri</div>
             <div className="flex flex-wrap gap-2">
               {user.roles.map((role) => (
-                <span
-                  key={role}
-                  className="rounded-full bg-primary/10 text-primary text-xs font-medium px-3 py-1"
-                >
-                  {role}
-                </span>
+                <RoleBadge key={role} role={role} />
               ))}
             </div>
           </div>
 
           {user.profile && (
             <div>
-              <div className="text-xs uppercase tracking-[0.18em] text-mutedText mb-1">Profile</div>
-              <div className="text-sm text-mutedText">
+              <div className="text-xs uppercase tracking-wider text-slate-500 mb-1">Profil</div>
+              <div className="text-sm text-slate-600">
                 Profil asociat rolului principal. Vezi secțiunea de debug pentru detalii brute.
               </div>
             </div>
@@ -52,7 +44,7 @@ export const Me: React.FC = () => {
 
         <button
           type="button"
-          className="text-xs text-mutedText hover:text-primary underline-offset-2 hover:underline self-start"
+          className="text-xs text-slate-600 hover:text-primary underline-offset-2 hover:underline self-start"
           onClick={() => setShowDebug((v) => !v)}
         >
           {showDebug ? 'Ascunde debug JSON' : 'Afișează debug JSON'}
@@ -66,7 +58,6 @@ export const Me: React.FC = () => {
           </Card>
         )}
       </div>
-    </Layout>
   );
 };
 
