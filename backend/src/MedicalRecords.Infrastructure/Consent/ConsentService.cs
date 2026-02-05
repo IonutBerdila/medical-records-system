@@ -63,22 +63,39 @@ public class ConsentService : IConsentService
         }
     }
 
+    public async Task<bool> RevokeAccessByIdAsync(Guid patientUserId, Guid accessId)
+    {
+        var now = DateTime.UtcNow;
+        var access = await _db.PatientDoctorAccesses
+            .FirstOrDefaultAsync(a => a.Id == accessId && a.PatientUserId == patientUserId && a.RevokedAtUtc == null);
+
+        if (access == null)
+        {
+            return false;
+        }
+
+        access.RevokedAtUtc = now;
+        await _db.SaveChangesAsync();
+        return true;
+    }
+
     public async Task<IReadOnlyList<AccessDto>> ListMyGrantedAccessAsync(Guid patientUserId)
     {
         var now = DateTime.UtcNow;
         var list = await _db.PatientDoctorAccesses
-            .Where(a => a.PatientUserId == patientUserId && a.RevokedAtUtc == null)
+            .Where(a => a.PatientUserId == patientUserId)
             .OrderByDescending(a => a.GrantedAtUtc)
             .ToListAsync();
 
         var result = new List<AccessDto>();
         foreach (var a in list)
         {
-            var isActive = a.ExpiresAtUtc == null || a.ExpiresAtUtc > now;
+            var isActive = a.RevokedAtUtc == null && (a.ExpiresAtUtc == null || a.ExpiresAtUtc > now);
             var doctor = await _userManager.FindByIdAsync(a.DoctorUserId.ToString());
             var profile = await _db.DoctorProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == a.DoctorUserId);
             result.Add(new AccessDto
             {
+                Id = a.Id,
                 DoctorUserId = a.DoctorUserId,
                 DoctorFullName = profile?.FullName ?? doctor?.Email,
                 GrantedAtUtc = a.GrantedAtUtc,

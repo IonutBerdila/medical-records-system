@@ -82,15 +82,25 @@ export const ShareAccessPage: React.FC = () => {
     }
   };
 
-  const handleRevoke = async (doctorUserId: string) => {
+  const handleRevoke = async (accessId: string) => {
     try {
-      await revokeAccess({ doctorUserId });
+      await revokeAccess(accessId);
       toast.success('Acces revocat.');
       load();
-    } catch (err: unknown) {
+    } catch (err: any) {
+      const status = err?.response?.status as number | undefined;
+      if (status === 404) {
+        toast.error('Acordul nu a fost găsit.');
+        return;
+      }
+      if (status === 403) {
+        toast.error('Nu ai drepturi pentru această acțiune.');
+        return;
+      }
       const msg =
-        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
-        (err as { message?: string })?.message ||
+        err?.response?.data?.message ||
+        err?.response?.data?.title ||
+        err?.message ||
         'Eroare la revocare';
       toast.error(msg);
     }
@@ -154,7 +164,7 @@ export const ShareAccessPage: React.FC = () => {
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {activeList.map((a) => (
-              <Card key={a.doctorUserId} className="p-4">
+              <Card key={a.id} className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 truncate">
@@ -170,13 +180,10 @@ export const ShareAccessPage: React.FC = () => {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="h-8 w-8 p-0"
-                      onClick={() => handleRevoke(a.doctorUserId)}
-                      aria-label="Revocă acces"
+                      className="h-8 px-3 text-xs"
+                      onClick={() => handleRevoke(a.id)}
                     >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                      </svg>
+                      Revocă
                     </Button>
                   </div>
                 </div>
@@ -195,7 +202,7 @@ export const ShareAccessPage: React.FC = () => {
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {expiredList.map((a) => (
-              <Card key={a.doctorUserId} className="p-4 opacity-80">
+              <Card key={a.id} className="p-4 opacity-80">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-900 truncate">

@@ -2,6 +2,7 @@ namespace MedicalRecords.Application.Consent;
 
 public class AccessDto
 {
+    public Guid Id { get; set; }
     public Guid DoctorUserId { get; set; }
     public string? DoctorFullName { get; set; }
     public DateTime GrantedAtUtc { get; set; }

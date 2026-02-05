@@ -5,6 +5,7 @@ public interface IConsentService
     Task<bool> HasActiveAccessAsync(Guid patientUserId, Guid doctorUserId);
     Task GrantDoctorAccessAsync(Guid patientUserId, Guid doctorUserId, DateTime? expiresAtUtc);
     Task RevokeDoctorAccessAsync(Guid patientUserId, Guid doctorUserId);
+    Task<bool> RevokeAccessByIdAsync(Guid patientUserId, Guid accessId);
     Task<IReadOnlyList<AccessDto>> ListMyGrantedAccessAsync(Guid patientUserId);
     Task<IReadOnlyList<DoctorPatientDto>> ListMyPatientsAsync(Guid doctorUserId);
 }

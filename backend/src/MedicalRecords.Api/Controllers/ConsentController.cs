@@ -47,16 +47,34 @@ public class ConsentController : ControllerBase
 
         Guid doctorUserId;
         if (request.DoctorUserId.HasValue)
-            doctorUserId = request.DoctorUserId.Value;
+        {
+            var doctorFromId = await _userManager.FindByIdAsync(request.DoctorUserId.Value.ToString());
+            if (doctorFromId == null)
+                return BadRequest(new { message = "Doctor not found with the given id." });
+
+            var isDoctorRole = await _userManager.IsInRoleAsync(doctorFromId, "Doctor");
+            if (!isDoctorRole)
+                return BadRequest(new { message = "Recipient must be a Doctor." });
+
+            doctorUserId = doctorFromId.Id;
+        }
         else if (!string.IsNullOrWhiteSpace(request.DoctorEmail))
         {
             var doctor = await _userManager.FindByEmailAsync(request.DoctorEmail);
             if (doctor == null)
                 return BadRequest(new { message = "Doctor not found with the given email." });
+            var isDoctorRole = await _userManager.IsInRoleAsync(doctor, "Doctor");
+            if (!isDoctorRole)
+                return BadRequest(new { message = "Recipient must be a Doctor." });
             doctorUserId = doctor.Id;
         }
         else
             return BadRequest(new { message = "Provide either DoctorUserId or DoctorEmail." });
+
+        if (doctorUserId == patientUserId.Value)
+        {
+            return BadRequest(new { message = "Recipient cannot be the same as the current patient." });
+        }
 
         await _consentService.GrantDoctorAccessAsync(patientUserId.Value, doctorUserId, request.ExpiresAtUtc);
         return NoContent();

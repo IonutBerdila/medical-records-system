@@ -1,4 +1,5 @@
 export interface AccessDto {
+  id: string;
   doctorUserId: string;
   doctorFullName?: string;
   grantedAtUtc: string;
@@ -10,8 +11,4 @@ export interface GrantAccessRequest {
   doctorUserId?: string;
   doctorEmail?: string;
   expiresAtUtc?: string;
-}
-
-export interface RevokeAccessRequest {
-  doctorUserId: string;
 }
