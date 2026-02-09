@@ -10,4 +10,10 @@ export interface PharmacyPrescriptionDto {
   createdAtUtc: string;
   doctorName?: string;
   status: string;
+  dispensedAtUtc?: string;
+}
+
+export interface PharmacyVerifyResponse {
+  verificationId: string;
+  prescriptions: PharmacyPrescriptionDto[];
 }

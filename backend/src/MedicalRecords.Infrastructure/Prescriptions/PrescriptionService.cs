@@ -64,7 +64,8 @@ public class PrescriptionService : IPrescriptionService
             Instructions = p.Instructions,
             ValidUntilUtc = p.ValidUntilUtc,
             Status = p.Status,
-            CreatedAtUtc = p.CreatedAtUtc
+            CreatedAtUtc = p.CreatedAtUtc,
+            DispensedAtUtc = p.DispensedAtUtc
         };
     }
 }

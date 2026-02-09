@@ -53,6 +53,11 @@ export const PrescriptionsPage: React.FC = () => {
                 <p className="mt-1 text-xs text-slate-600">
                   {new Date(p.createdAtUtc).toLocaleDateString('ro-RO')} · Status: {p.status}
                 </p>
+                {p.dispensedAtUtc && (
+                  <p className="mt-1 text-xs text-emerald-700">
+                    Eliberată la: {new Date(p.dispensedAtUtc).toLocaleString('ro-RO')}
+                  </p>
+                )}
               </Card>
             ))}
           </div>

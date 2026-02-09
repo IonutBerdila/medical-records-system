@@ -8,6 +8,7 @@ export interface PrescriptionDto {
   validUntilUtc?: string;
   status: string;
   createdAtUtc: string;
+  dispensedAtUtc?: string;
 }
 
 export interface CreatePrescriptionRequest {

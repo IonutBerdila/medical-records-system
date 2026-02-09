@@ -11,4 +11,5 @@ public class PrescriptionDto
     public DateTime? ValidUntilUtc { get; set; }
     public string Status { get; set; } = default!;
     public DateTime CreatedAtUtc { get; set; }
+    public DateTime? DispensedAtUtc { get; set; }
 }

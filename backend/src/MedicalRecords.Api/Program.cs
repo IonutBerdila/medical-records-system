@@ -6,16 +6,20 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MedicalRecords.Application.Auth;
+using MedicalRecords.Application.Audit;
 using MedicalRecords.Application.Consent;
 using MedicalRecords.Application.Entries;
+using MedicalRecords.Application.Pharmacy;
 using MedicalRecords.Application.Prescriptions;
 using MedicalRecords.Application.Records;
 using MedicalRecords.Application.ShareToken;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Auth;
+using MedicalRecords.Infrastructure.Audit;
 using MedicalRecords.Infrastructure.Consent;
 using MedicalRecords.Infrastructure.Data;
 using MedicalRecords.Infrastructure.Entries;
+using MedicalRecords.Infrastructure.Pharmacy;
 using MedicalRecords.Infrastructure.Prescriptions;
 using MedicalRecords.Infrastructure.Records;
 using MedicalRecords.Infrastructure.ShareToken;
@@ -90,11 +94,13 @@ builder.Services.AddRateLimiter(options =>
 
 // Dependency Injection
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAuditService, AuditService>();
 builder.Services.AddScoped<IConsentService, ConsentService>();
 builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
 builder.Services.AddScoped<IMedicalEntryService, MedicalEntryService>();
 builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
+builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 
 // Add Controllers
 builder.Services.AddControllers();

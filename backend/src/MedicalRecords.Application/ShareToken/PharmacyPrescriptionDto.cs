@@ -10,4 +10,5 @@ public class PharmacyPrescriptionDto
     public DateTime CreatedAtUtc { get; set; }
     public string? DoctorName { get; set; }
     public string Status { get; set; } = default!;
+    public DateTime? DispensedAtUtc { get; set; }
 }

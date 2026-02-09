@@ -22,6 +22,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
     public DbSet<PatientDoctorAccess> PatientDoctorAccesses => Set<PatientDoctorAccess>();
     public DbSet<Domain.Entities.ShareToken> ShareTokens => Set<Domain.Entities.ShareToken>();
+    public DbSet<PharmacyVerificationSession> PharmacyVerificationSessions => Set<PharmacyVerificationSession>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -135,6 +137,37 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .WithMany()
                 .HasForeignKey(x => x.PatientUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // PharmacyVerificationSession
+        builder.Entity<PharmacyVerificationSession>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.ShareTokenId);
+            entity.HasIndex(x => x.PharmacyUserId);
+            entity.HasIndex(x => x.PatientUserId);
+            entity.Property(x => x.ExpiresAtUtc);
+            entity.HasOne<Domain.Entities.ShareToken>()
+                .WithMany()
+                .HasForeignKey(x => x.ShareTokenId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.PharmacyUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.PatientUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // AuditEvent
+        builder.Entity<AuditEvent>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.PatientUserId, x.TimestampUtc });
+            entity.HasIndex(x => new { x.ActorUserId, x.TimestampUtc });
+            entity.HasIndex(x => new { x.Action, x.TimestampUtc });
         });
     }
 }

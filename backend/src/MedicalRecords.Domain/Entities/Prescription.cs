@@ -12,6 +12,13 @@ public class Prescription
     public string? Dosage { get; set; }
     public string? Instructions { get; set; }
     public DateTime? ValidUntilUtc { get; set; }
-    public string Status { get; set; } = "Active"; // Active, Cancelled, Fulfilled
+    /// <summary>
+    /// Status prescripție: Active, Dispensed, Cancelled, Expired.
+    /// </summary>
+    public string Status { get; set; } = "Active";
+    /// <summary>Data la care a fost eliberată de o farmacie (dacă este cazul).</summary>
+    public DateTime? DispensedAtUtc { get; set; }
+    /// <summary>Utilizatorul (farmacia) care a marcat prescripția ca eliberată.</summary>
+    public Guid? DispensedByPharmacyUserId { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }
