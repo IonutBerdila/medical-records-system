@@ -1,5 +1,5 @@
 import { http } from '../http';
-import type { AccessDto, GrantAccessRequest } from './types';
+import type { AccessDto, GrantAccessRequest, CreateShareTokenRequest, ShareTokenResponse } from './types';
 
 export async function getMyDoctors(): Promise<AccessDto[]> {
   const { data } = await http.get<AccessDto[]>('/api/consent/my-doctors');
@@ -12,4 +12,9 @@ export async function grantAccess(body: GrantAccessRequest): Promise<void> {
 
 export async function revokeAccess(accessId: string): Promise<void> {
   await http.delete(`/api/access-grants/${accessId}`);
+}
+
+export async function createShareToken(body?: CreateShareTokenRequest): Promise<ShareTokenResponse> {
+  const { data } = await http.post<ShareTokenResponse>('/api/consent/share-token', body ?? {});
+  return data;
 }

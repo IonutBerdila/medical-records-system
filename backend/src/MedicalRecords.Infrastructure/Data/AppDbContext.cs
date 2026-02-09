@@ -21,6 +21,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<MedicalEntry> MedicalEntries => Set<MedicalEntry>();
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
     public DbSet<PatientDoctorAccess> PatientDoctorAccesses => Set<PatientDoctorAccess>();
+    public DbSet<Domain.Entities.ShareToken> ShareTokens => Set<Domain.Entities.ShareToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -121,6 +122,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(x => x.DoctorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ShareToken — token temporar pentru farmacie (hash stocat, nu tokenul în clar)
+        builder.Entity<Domain.Entities.ShareToken>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.TokenHash);
+            entity.HasIndex(x => x.PatientUserId);
+            entity.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.PatientUserId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

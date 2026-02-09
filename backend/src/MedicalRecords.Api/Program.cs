@@ -1,5 +1,7 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -8,6 +10,7 @@ using MedicalRecords.Application.Consent;
 using MedicalRecords.Application.Entries;
 using MedicalRecords.Application.Prescriptions;
 using MedicalRecords.Application.Records;
+using MedicalRecords.Application.ShareToken;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Auth;
 using MedicalRecords.Infrastructure.Consent;
@@ -15,6 +18,7 @@ using MedicalRecords.Infrastructure.Data;
 using MedicalRecords.Infrastructure.Entries;
 using MedicalRecords.Infrastructure.Prescriptions;
 using MedicalRecords.Infrastructure.Records;
+using MedicalRecords.Infrastructure.ShareToken;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,12 +71,30 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireAdmin", policy => policy.RequireRole("Admin"));
 });
 
+// Rate limiting – protecție brute-force pentru endpoint-ul de farmacie
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddPolicy("PharmacyVerifyPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User?.Identity?.Name
+                         ?? context.Connection.RemoteIpAddress?.ToString()
+                         ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+});
+
 // Dependency Injection
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IConsentService, ConsentService>();
 builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
 builder.Services.AddScoped<IMedicalEntryService, MedicalEntryService>();
 builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
+builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 
 // Add Controllers
 builder.Services.AddControllers();
@@ -138,6 +160,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseCors("WebClient");
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

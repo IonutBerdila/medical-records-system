@@ -12,3 +12,15 @@ export interface GrantAccessRequest {
   doctorEmail?: string;
   expiresAtUtc?: string;
 }
+
+export interface CreateShareTokenRequest {
+  scope?: string;
+  expiresInMinutes?: number;
+  prescriptionId?: string;
+}
+
+export interface ShareTokenResponse {
+  token: string;
+  expiresAtUtc: string;
+  scope: string;
+}

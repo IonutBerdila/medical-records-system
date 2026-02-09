@@ -4,8 +4,8 @@ import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
-import { getMyDoctors, grantAccess, revokeAccess } from '../app/consent/consentApi';
-import type { AccessDto, GrantAccessRequest } from '../app/consent/types';
+import { getMyDoctors, grantAccess, revokeAccess, createShareToken } from '../app/consent/consentApi';
+import type { AccessDto, GrantAccessRequest, ShareTokenResponse } from '../app/consent/types';
 
 function formatExpiry(expiresAtUtc?: string): string {
   if (!expiresAtUtc) return 'Fără expirare';
@@ -32,6 +32,9 @@ export const ShareAccessPage: React.FC = () => {
   const [granting, setGranting] = useState(false);
   const [doctorEmail, setDoctorEmail] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
+  const [shareTokenLoading, setShareTokenLoading] = useState(false);
+  const [shareTokenResult, setShareTokenResult] = useState<ShareTokenResponse | null>(null);
+  const [shareTokenExpiresIn, setShareTokenExpiresIn] = useState<number>(10);
 
   const load = () => {
     getMyDoctors()
@@ -79,6 +82,26 @@ export const ShareAccessPage: React.FC = () => {
       toast.error(msg);
     } finally {
       setGranting(false);
+    }
+  };
+
+  const handleCreateShareToken = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShareTokenLoading(true);
+    setShareTokenResult(null);
+    try {
+      const expiresInMinutes = Math.min(60, Math.max(1, shareTokenExpiresIn || 10));
+      const result = await createShareToken({ expiresInMinutes });
+      setShareTokenResult(result);
+      toast.success('Token generat. Copiază-l acum — se afișează o singură dată.');
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (err as { message?: string })?.message ||
+        'Eroare la generare token';
+      toast.error(msg);
+    } finally {
+      setShareTokenLoading(false);
     }
   };
 
@@ -147,6 +170,58 @@ export const ShareAccessPage: React.FC = () => {
             + Acord nou
           </Button>
         </form>
+      </Card>
+
+      {/* Token pentru farmacie */}
+      <Card className="p-6">
+        <h2 className="text-xl font-semibold text-slate-900">Token pentru farmacie</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Generează un token temporar (one-time) de <span className="font-mono font-semibold">10 caractere</span> pe care îl poți da
+          farmaciei pentru a vedea rețetele tale. Tokenul se afișează o singură dată.
+        </p>
+        {!shareTokenResult ? (
+          <form className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={handleCreateShareToken}>
+            <div className="w-32">
+              <Input
+                label="Valabil (min)"
+                type="number"
+                min={1}
+                max={60}
+                value={shareTokenExpiresIn}
+                onChange={(e) => setShareTokenExpiresIn(parseInt(e.target.value, 10) || 10)}
+              />
+            </div>
+            <Button type="submit" loading={shareTokenLoading} className="shrink-0">
+              Generează token
+            </Button>
+          </form>
+        ) : (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-4">
+            <p className="text-sm font-medium text-amber-800">Copiază tokenul acum — nu se mai afișează.</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <code className="break-all rounded-lg bg-slate-800 px-3 py-2 text-sm text-teal-300 font-mono">
+                {shareTokenResult.token.replace(/(.{5})(.{5})/, '$1-$2')}
+              </code>
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(shareTokenResult.token);
+                  toast.success('Token copiat.');
+                }}
+              >
+                Copiază
+              </Button>
+            </div>
+            <p className="mt-2 text-xs text-slate-600">
+              Expiră: {new Date(shareTokenResult.expiresAtUtc).toLocaleString('ro-RO')} · Scope: {shareTokenResult.scope}
+            </p>
+            <Button type="button" variant="ghost" className="mt-3 text-sm" onClick={() => setShareTokenResult(null)}>
+              Generează alt token
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* Active Grants */}

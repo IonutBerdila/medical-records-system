@@ -1,17 +1,52 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
 import { IconQr } from '../ui/Icons';
+import { verifyShareToken } from '../app/pharmacy/pharmacyApi';
+import type { PharmacyPrescriptionDto } from '../app/pharmacy/types';
+
+const TOKEN_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
 export const PharmacyPage: React.FC = () => {
   const [token, setToken] = useState('');
-  const navigate = useNavigate();
+  const [verifying, setVerifying] = useState(false);
+  const [prescriptions, setPrescriptions] = useState<PharmacyPrescriptionDto[] | null>(null);
 
-  const handleTokenSubmit = (e: React.FormEvent) => {
+  const handleTokenSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (token.trim()) navigate('/pharmacy/prescription');
+    if (!token.trim()) return;
+
+    const normalized = token.trim().toUpperCase();
+    const isValid =
+      normalized.length === 10 &&
+      [...normalized].every((c) => TOKEN_ALPHABET.includes(c));
+
+    if (!isValid) {
+      toast.error(
+        'Token invalid. Folosește exact 10 caractere din A–Z și 2–9, fără I, L, O, 0, 1.'
+      );
+      return;
+    }
+
+    setVerifying(true);
+    setPrescriptions(null);
+    try {
+      const list = await verifyShareToken({ token: normalized });
+      setPrescriptions(list);
+      if (list.length === 0) toast.success('Token valid, dar nu există rețete de afișat.');
+      else toast.success(`${list.length} rețetă/rețete găsite.`);
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
+        (err as { message?: string })?.message ||
+        'Token invalid, expirat sau deja folosit.';
+      toast.error(msg);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -51,17 +86,43 @@ export const PharmacyPage: React.FC = () => {
           <form onSubmit={handleTokenSubmit} className="mt-4 space-y-4">
             <Input
               label="Token pacient"
-              placeholder="MR-XXXX-XXXX-XXXX-XXXX"
+              placeholder="ABCDF-234GH"
               value={token}
               onChange={(e) => setToken(e.target.value)}
-              helper="Introdu tokenul furnizat de pacient."
+              helper="Introdu tokenul de 10 caractere furnizat de pacient (fără I, L, O, 0, 1)."
             />
-            <Button type="submit" disabled={!token.trim()}>
-              Accesează rețeta
+            <Button type="submit" disabled={!token.trim()} loading={verifying}>
+              Verifică token
             </Button>
           </form>
         </Card>
       </div>
+
+      {/* Rezultate verificare */}
+      {prescriptions !== null && (
+        <Card className="p-6">
+          <h2 className="text-xl font-semibold text-slate-900">Rețete (token one-time consumat)</h2>
+          {prescriptions.length === 0 ? (
+            <p className="mt-2 text-sm text-slate-600">Nu există rețete de afișat pentru acest token.</p>
+          ) : (
+            <ul className="mt-4 space-y-4">
+              {prescriptions.map((p) => (
+                <li key={p.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-slate-900">{p.medicationName}</span>
+                    <Badge variant="default">{p.status}</Badge>
+                  </div>
+                  {p.dosage && <p className="mt-1 text-sm text-slate-600">Dozaj: {p.dosage}</p>}
+                  {p.instructions && <p className="mt-0.5 text-sm text-slate-600">{p.instructions}</p>}
+                  <p className="mt-1 text-xs text-slate-500">
+                    Doctor: {p.doctorName ?? '—'} · {new Date(p.createdAtUtc).toLocaleString('ro-RO')}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
 
       <footer className="mt-12 border-t border-slate-200 pt-6 text-center text-xs text-slate-500">
         © {new Date().getFullYear()} MedRecord. Conformitate HIPAA • Conexiune criptată.
