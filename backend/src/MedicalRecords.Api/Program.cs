@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using MedicalRecords.Application.Admin;
 using MedicalRecords.Application.Auth;
 using MedicalRecords.Application.Audit;
 using MedicalRecords.Application.Consent;
@@ -14,6 +15,7 @@ using MedicalRecords.Application.Prescriptions;
 using MedicalRecords.Application.Records;
 using MedicalRecords.Application.ShareToken;
 using MedicalRecords.Domain.Entities;
+using MedicalRecords.Infrastructure.Admin;
 using MedicalRecords.Infrastructure.Auth;
 using MedicalRecords.Infrastructure.Audit;
 using MedicalRecords.Infrastructure.Consent;
@@ -95,6 +97,8 @@ builder.Services.AddRateLimiter(options =>
 // Dependency Injection
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
+builder.Services.AddScoped<IApprovalGuard, ApprovalGuard>();
 builder.Services.AddScoped<IConsentService, ConsentService>();
 builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
 builder.Services.AddScoped<IMedicalEntryService, MedicalEntryService>();
@@ -141,10 +145,13 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Seed roluri la startup
+// Seed roluri și admin user la startup
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    
     string[] roles = ["Patient", "Doctor", "Pharmacy", "Admin"];
 
     foreach (var role in roles)
@@ -152,6 +159,35 @@ using (var scope = app.Services.CreateScope())
         if (!await roleManager.RoleExistsAsync(role))
         {
             await roleManager.CreateAsync(new IdentityRole<Guid>(role));
+        }
+    }
+
+    // Seed default admin user în Development
+    if (app.Environment.IsDevelopment())
+    {
+        var adminEmail = configuration["Admin:Email"] ?? "admin@medicalrecords.local";
+        var adminPassword = configuration["Admin:Password"] ?? "Admin123!";
+
+        var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+        if (existingAdmin == null)
+        {
+            var adminUser = new ApplicationUser
+            {
+                Id = Guid.NewGuid(),
+                Email = adminEmail,
+                UserName = adminEmail,
+                EmailConfirmed = true
+            };
+
+            var createResult = await userManager.CreateAsync(adminUser, adminPassword);
+            if (createResult.Succeeded)
+            {
+                await userManager.AddToRoleAsync(adminUser, "Admin");
+            }
+        }
+        else if (!await userManager.IsInRoleAsync(existingAdmin, "Admin"))
+        {
+            await userManager.AddToRoleAsync(existingAdmin, "Admin");
         }
     }
 }

@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using MedicalRecords.Application.Auth;
+using MedicalRecords.Application.Audit;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
@@ -22,17 +23,20 @@ public class AuthService : IAuthService
     private readonly RoleManager<IdentityRole<Guid>> _roleManager;
     private readonly AppDbContext _dbContext;
     private readonly IConfiguration _configuration;
+    private readonly IAuditService? _auditService;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         RoleManager<IdentityRole<Guid>> roleManager,
         AppDbContext dbContext,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IAuditService? auditService = null)
     {
         _userManager = userManager;
         _roleManager = roleManager;
         _dbContext = dbContext;
         _configuration = configuration;
+        _auditService = auditService;
     }
 
     public async Task<RegisterResponse> RegisterAsync(RegisterRequest req)
@@ -85,23 +89,57 @@ public class AuthService : IAuthService
                 });
                 break;
             case "Doctor":
-                _dbContext.DoctorProfiles.Add(new DoctorProfile
+                var doctorProfile = new DoctorProfile
                 {
                     Id = Guid.NewGuid(),
                     UserId = user.Id,
                     FullName = req.FullName,
                     LicenseNumber = null,
-                    CreatedAtUtc = utcNow
-                });
+                    CreatedAtUtc = utcNow,
+                    ApprovalStatus = "Pending" // Doctor trebuie aprobat de admin
+                };
+                _dbContext.DoctorProfiles.Add(doctorProfile);
+                
+                // Log audit event pentru înregistrare Doctor
+                if (_auditService != null)
+                {
+                    await _auditService.LogAsync(new AuditEventCreate
+                    {
+                        TimestampUtc = utcNow,
+                        Action = "DOCTOR_REGISTRATION_CREATED",
+                        ActorUserId = user.Id,
+                        ActorRole = "Doctor",
+                        EntityType = "DoctorProfile",
+                        EntityId = doctorProfile.Id,
+                        MetadataJson = $"{{\"fullName\":\"{req.FullName}\",\"email\":\"{req.Email}\"}}"
+                    });
+                }
                 break;
             case "Pharmacy":
-                _dbContext.PharmacyProfiles.Add(new PharmacyProfile
+                var pharmacyProfile = new PharmacyProfile
                 {
                     Id = Guid.NewGuid(),
                     UserId = user.Id,
                     PharmacyName = req.FullName,
-                    CreatedAtUtc = utcNow
-                });
+                    CreatedAtUtc = utcNow,
+                    ApprovalStatus = "Pending" // Pharmacy trebuie aprobat de admin
+                };
+                _dbContext.PharmacyProfiles.Add(pharmacyProfile);
+                
+                // Log audit event pentru înregistrare Pharmacy
+                if (_auditService != null)
+                {
+                    await _auditService.LogAsync(new AuditEventCreate
+                    {
+                        TimestampUtc = utcNow,
+                        Action = "PHARMACY_REGISTRATION_CREATED",
+                        ActorUserId = user.Id,
+                        ActorRole = "Pharmacy",
+                        EntityType = "PharmacyProfile",
+                        EntityId = pharmacyProfile.Id,
+                        MetadataJson = $"{{\"pharmacyName\":\"{req.FullName}\",\"email\":\"{req.Email}\"}}"
+                    });
+                }
                 break;
             case "Admin":
                 // Admin nu are profil asociat

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using MedicalRecords.Application.Admin;
 using MedicalRecords.Application.Pharmacy;
 using MedicalRecords.Application.ShareToken;
 using Microsoft.AspNetCore.Authorization;
@@ -17,11 +18,16 @@ public class PharmacyController : ControllerBase
 {
     private readonly IShareTokenService _shareTokenService;
     private readonly IPharmacyService _pharmacyService;
+    private readonly IApprovalGuard _approvalGuard;
 
-    public PharmacyController(IShareTokenService shareTokenService, IPharmacyService pharmacyService)
+    public PharmacyController(
+        IShareTokenService shareTokenService, 
+        IPharmacyService pharmacyService,
+        IApprovalGuard approvalGuard)
     {
         _shareTokenService = shareTokenService;
         _pharmacyService = pharmacyService;
+        _approvalGuard = approvalGuard;
     }
 
     private Guid? GetCurrentUserId()
@@ -35,10 +41,21 @@ public class PharmacyController : ControllerBase
     [EnableRateLimiting("PharmacyVerifyPolicy")]
     [ProducesResponseType(typeof(IReadOnlyList<PharmacyPrescriptionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> VerifyShareToken([FromBody] VerifyShareTokenRequest request)
     {
         var pharmacyUserId = GetCurrentUserId();
         if (pharmacyUserId == null) return Unauthorized();
+        
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(pharmacyUserId.Value, "Pharmacy");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        
         if (request?.Token == null)
             return BadRequest(new { message = "Token lipsă." });
 
@@ -60,10 +77,21 @@ public class PharmacyController : ControllerBase
     [EnableRateLimiting("PharmacyVerifyPolicy")]
     [ProducesResponseType(typeof(PharmacyVerifyResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> VerifyShareTokenV2([FromBody] VerifyShareTokenRequest request)
     {
         var pharmacyUserId = GetCurrentUserId();
         if (pharmacyUserId == null) return Unauthorized();
+        
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(pharmacyUserId.Value, "Pharmacy");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        
         if (request?.Token == null)
             return BadRequest(new { message = "Token lipsă." });
 
@@ -88,12 +116,22 @@ public class PharmacyController : ControllerBase
     [HttpPost("dispense")]
     [ProducesResponseType(typeof(PharmacyPrescriptionDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Dispense([FromBody] DispenseRequest request)
     {
         var pharmacyUserId = GetCurrentUserId();
         if (pharmacyUserId == null) return Unauthorized();
+
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(pharmacyUserId.Value, "Pharmacy");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
 
         try
         {

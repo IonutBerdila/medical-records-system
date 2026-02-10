@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
+using MedicalRecords.Application.Admin;
 using MedicalRecords.Application.Entries;
 using MedicalRecords.Application.Prescriptions;
 using MedicalRecords.Application.Records;
@@ -18,15 +19,18 @@ public class PatientsController : ControllerBase
     private readonly IMedicalRecordService _recordService;
     private readonly IMedicalEntryService _entryService;
     private readonly IPrescriptionService _prescriptionService;
+    private readonly IApprovalGuard _approvalGuard;
 
     public PatientsController(
         IMedicalRecordService recordService,
         IMedicalEntryService entryService,
-        IPrescriptionService prescriptionService)
+        IPrescriptionService prescriptionService,
+        IApprovalGuard approvalGuard)
     {
         _recordService = recordService;
         _entryService = entryService;
         _prescriptionService = prescriptionService;
+        _approvalGuard = approvalGuard;
     }
 
     private Guid? GetCurrentUserId()
@@ -37,10 +41,21 @@ public class PatientsController : ControllerBase
 
     [HttpGet("{patientUserId:guid}/entries")]
     [ProducesResponseType(typeof(IReadOnlyList<MedicalEntryDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetPatientEntries(Guid patientUserId)
     {
         var doctorUserId = GetCurrentUserId();
         if (doctorUserId == null) return Unauthorized();
+        
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(doctorUserId.Value, "Doctor");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        
         try
         {
             var result = await _entryService.GetEntriesForPatientAsync(doctorUserId.Value, patientUserId);
@@ -54,10 +69,21 @@ public class PatientsController : ControllerBase
 
     [HttpGet("{patientUserId:guid}/record")]
     [ProducesResponseType(typeof(MedicalRecordDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> GetPatientRecord(Guid patientUserId)
     {
         var doctorUserId = GetCurrentUserId();
         if (doctorUserId == null) return Unauthorized();
+        
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(doctorUserId.Value, "Doctor");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        
         try
         {
             var result = await _recordService.GetPatientRecordForDoctorAsync(doctorUserId.Value, patientUserId);
@@ -71,10 +97,21 @@ public class PatientsController : ControllerBase
 
     [HttpPost("{patientUserId:guid}/entries")]
     [ProducesResponseType(typeof(MedicalEntryDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AddPatientEntry(Guid patientUserId, [FromBody] CreateMedicalEntryRequest request)
     {
         var doctorUserId = GetCurrentUserId();
         if (doctorUserId == null) return Unauthorized();
+        
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(doctorUserId.Value, "Doctor");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        
         try
         {
             var result = await _entryService.AddEntryForPatientAsync(doctorUserId.Value, patientUserId, request);
@@ -92,10 +129,21 @@ public class PatientsController : ControllerBase
 
     [HttpPost("{patientUserId:guid}/prescriptions")]
     [ProducesResponseType(typeof(PrescriptionDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> CreatePatientPrescription(Guid patientUserId, [FromBody] CreatePrescriptionRequest request)
     {
         var doctorUserId = GetCurrentUserId();
         if (doctorUserId == null) return Unauthorized();
+        
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(doctorUserId.Value, "Doctor");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        
         try
         {
             var result = await _prescriptionService.CreatePrescriptionForPatientAsync(doctorUserId.Value, patientUserId, request);

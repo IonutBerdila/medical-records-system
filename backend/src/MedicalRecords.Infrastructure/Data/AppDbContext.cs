@@ -51,6 +51,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasIndex(x => x.UserId)
                 .IsUnique();
 
+            entity.HasIndex(x => x.ApprovalStatus);
+
+            entity.Property(x => x.ApprovalStatus)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.RejectionReason)
+                .HasMaxLength(500);
+
             entity.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(x => x.UserId)
@@ -64,6 +73,15 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
 
             entity.HasIndex(x => x.UserId)
                 .IsUnique();
+
+            entity.HasIndex(x => x.ApprovalStatus);
+
+            entity.Property(x => x.ApprovalStatus)
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(x => x.RejectionReason)
+                .HasMaxLength(500);
 
             entity.HasOne<ApplicationUser>()
                 .WithMany()
