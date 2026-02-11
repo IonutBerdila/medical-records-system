@@ -70,3 +70,40 @@ export const IconPulse: React.FC<{ className?: string; light?: boolean }> = ({ c
     />
   </svg>
 );
+
+/** Eye icon for password visibility toggle */
+export const IconEye: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`h-5 w-5 ${iconClass} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    {/* Outer eye */}
+    <path
+      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Pupil */}
+    <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
+  </svg>
+);
+
+/** Eye-slash icon for password visibility toggle (hidden state) */
+export const IconEyeSlash: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`h-5 w-5 ${iconClass} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    {/* Outer eye */}
+    <path
+      d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Pupil (offset a bit when slashed, optional) */}
+    <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
+    {/* Slash line */}
+    <path
+      d="M5 5l14 14"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);

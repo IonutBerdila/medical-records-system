@@ -11,7 +11,7 @@ export const AuthLanding: React.FC = () => {
     <Layout>
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold text-text mb-1">Bun venit în Med Card</h1>
+          <h1 className="text-2xl font-semibold text-text mb-1">Bun venit în MedRecord</h1>
           <p className="text-sm text-mutedText">
             Creează un cont nou sau autentifică-te pentru a continua.
           </p>

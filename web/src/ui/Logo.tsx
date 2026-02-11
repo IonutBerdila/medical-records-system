@@ -16,8 +16,8 @@ export const Logo: React.FC<LogoProps> = ({ compact }) => {
       </div>
       {!compact && (
         <div className="leading-tight">
-          <div className="text-xs font-semibold tracking-[0.18em] uppercase text-slate-500">Med Card</div>
-          <div className="text-sm font-medium text-white">Calitate în servicii medicale</div>
+          <div className="text-xs font-semibold tracking-[0.18em] uppercase text-slate-500">MedRecord</div>
+          <div className="text-sm font-medium text-white">Dosar medical personal digital</div>
         </div>
       )}
     </div>

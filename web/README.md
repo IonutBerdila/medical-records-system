@@ -1,4 +1,4 @@
-# Med Card Web UI (Phase 2.5)
+# MedRecord Web UI (Phase 2.5)
 
 Interfață web minimală pentru sistemul `medical-records-system`, inspirată de aplicațiile mobile. Pentru testarea rapidă a fluxurilor de autentificare și roluri peste backend-ul existent.
 
