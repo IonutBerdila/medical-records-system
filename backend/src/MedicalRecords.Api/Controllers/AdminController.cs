@@ -55,18 +55,12 @@ public class AdminController : ControllerBase
     /// </summary>
     [HttpPost("approvals/{userId}/approve")]
     [ProducesResponseType(typeof(AdminUserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ApproveUser(Guid userId, [FromBody] ApproveUserRequest? request = null)
     {
-        try
-        {
-            var adminUserId = GetCurrentUserId();
-            var result = await _adminService.ApproveUserAsync(adminUserId, userId, request);
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var adminUserId = GetCurrentUserId();
+        var result = await _adminService.ApproveUserAsync(adminUserId, userId, request);
+        return Ok(result);
     }
 
     /// <summary>
@@ -74,22 +68,12 @@ public class AdminController : ControllerBase
     /// </summary>
     [HttpPost("approvals/{userId}/reject")]
     [ProducesResponseType(typeof(AdminUserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RejectUser(Guid userId, [FromBody] RejectUserRequest request)
     {
-        try
-        {
-            var adminUserId = GetCurrentUserId();
-            var result = await _adminService.RejectUserAsync(adminUserId, userId, request);
-            return Ok(result);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var adminUserId = GetCurrentUserId();
+        var result = await _adminService.RejectUserAsync(adminUserId, userId, request);
+        return Ok(result);
     }
 
     /// <summary>

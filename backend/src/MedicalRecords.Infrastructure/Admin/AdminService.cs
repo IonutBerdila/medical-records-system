@@ -1,7 +1,7 @@
 using MedicalRecords.Application.Admin;
 using MedicalRecords.Application.Audit;
+using MedicalRecords.Application.Common;
 using MedicalRecords.Domain.Entities;
-using MedicalRecords.Infrastructure.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,16 +9,25 @@ namespace MedicalRecords.Infrastructure.Admin;
 
 public class AdminService : IAdminService
 {
-    private readonly AppDbContext _db;
+    private readonly IRepository<PatientProfile> _patientProfiles;
+    private readonly IRepository<DoctorProfile> _doctorProfiles;
+    private readonly IRepository<PharmacyProfile> _pharmacyProfiles;
+    private readonly IRepository<AuditEvent> _auditEvents;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IAuditService _auditService;
 
     public AdminService(
-        AppDbContext db,
+        IRepository<PatientProfile> patientProfiles,
+        IRepository<DoctorProfile> doctorProfiles,
+        IRepository<PharmacyProfile> pharmacyProfiles,
+        IRepository<AuditEvent> auditEvents,
         UserManager<ApplicationUser> userManager,
         IAuditService auditService)
     {
-        _db = db;
+        _patientProfiles = patientProfiles;
+        _doctorProfiles = doctorProfiles;
+        _pharmacyProfiles = pharmacyProfiles;
+        _auditEvents = auditEvents;
         _userManager = userManager;
         _auditService = auditService;
     }
@@ -68,7 +77,8 @@ public class AdminService : IAdminService
             // Load profile based on role
             if (roles.Contains("Patient"))
             {
-                var profile = await _db.PatientProfiles
+                var profile = await _patientProfiles
+                    .Query()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.UserId == user.Id);
                 if (profile != null)
@@ -79,7 +89,8 @@ public class AdminService : IAdminService
             }
             else if (roles.Contains("Doctor"))
             {
-                var profile = await _db.DoctorProfiles
+                var profile = await _doctorProfiles
+                    .Query()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.UserId == user.Id);
                 if (profile != null)
@@ -103,7 +114,8 @@ public class AdminService : IAdminService
             }
             else if (roles.Contains("Pharmacy"))
             {
-                var profile = await _db.PharmacyProfiles
+                var profile = await _pharmacyProfiles
+                    .Query()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.UserId == user.Id);
                 if (profile != null)
@@ -171,7 +183,8 @@ public class AdminService : IAdminService
             
             if (roles.Contains("Doctor"))
             {
-                var profile = await _db.DoctorProfiles
+                var profile = await _doctorProfiles
+                    .Query()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.UserId == user.Id);
                 
@@ -195,7 +208,8 @@ public class AdminService : IAdminService
             }
             else if (roles.Contains("Pharmacy"))
             {
-                var profile = await _db.PharmacyProfiles
+                var profile = await _pharmacyProfiles
+                    .Query()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(p => p.UserId == user.Id);
                 
@@ -245,7 +259,8 @@ public class AdminService : IAdminService
 
         if (roles.Contains("Doctor"))
         {
-            var profile = await _db.DoctorProfiles
+            var profile = await _doctorProfiles
+                .Query()
                 .FirstOrDefaultAsync(p => p.UserId == userId);
             
             if (profile == null)
@@ -259,7 +274,8 @@ public class AdminService : IAdminService
             profile.RejectedAtUtc = null;
             profile.RejectionReason = null;
 
-            await _db.SaveChangesAsync();
+            _doctorProfiles.Update(profile);
+            await _doctorProfiles.SaveChangesAsync();
 
             // Log audit event
             await _auditService.LogAsync(new AuditEventCreate
@@ -288,7 +304,8 @@ public class AdminService : IAdminService
         }
         else if (roles.Contains("Pharmacy"))
         {
-            var profile = await _db.PharmacyProfiles
+            var profile = await _pharmacyProfiles
+                .Query()
                 .FirstOrDefaultAsync(p => p.UserId == userId);
             
             if (profile == null)
@@ -302,7 +319,8 @@ public class AdminService : IAdminService
             profile.RejectedAtUtc = null;
             profile.RejectionReason = null;
 
-            await _db.SaveChangesAsync();
+            _pharmacyProfiles.Update(profile);
+            await _pharmacyProfiles.SaveChangesAsync();
 
             // Log audit event
             await _auditService.LogAsync(new AuditEventCreate
@@ -357,7 +375,8 @@ public class AdminService : IAdminService
 
         if (roles.Contains("Doctor"))
         {
-            var profile = await _db.DoctorProfiles
+            var profile = await _doctorProfiles
+                .Query()
                 .FirstOrDefaultAsync(p => p.UserId == userId);
             
             if (profile == null)
@@ -371,7 +390,8 @@ public class AdminService : IAdminService
             profile.ApprovedAtUtc = null;
             profile.ApprovedByAdminUserId = null;
 
-            await _db.SaveChangesAsync();
+            _doctorProfiles.Update(profile);
+            await _doctorProfiles.SaveChangesAsync();
 
             // Log audit event
             await _auditService.LogAsync(new AuditEventCreate
@@ -400,7 +420,8 @@ public class AdminService : IAdminService
         }
         else if (roles.Contains("Pharmacy"))
         {
-            var profile = await _db.PharmacyProfiles
+            var profile = await _pharmacyProfiles
+                .Query()
                 .FirstOrDefaultAsync(p => p.UserId == userId);
             
             if (profile == null)
@@ -414,7 +435,8 @@ public class AdminService : IAdminService
             profile.ApprovedAtUtc = null;
             profile.ApprovedByAdminUserId = null;
 
-            await _db.SaveChangesAsync();
+            _pharmacyProfiles.Update(profile);
+            await _pharmacyProfiles.SaveChangesAsync();
 
             // Log audit event
             await _auditService.LogAsync(new AuditEventCreate
@@ -464,9 +486,11 @@ public class AdminService : IAdminService
         }
 
         // Count pending approvals by role
-        var pendingDoctors = await _db.DoctorProfiles
+        var pendingDoctors = await _doctorProfiles
+            .Query()
             .CountAsync(p => p.ApprovalStatus == "Pending");
-        var pendingPharmacies = await _db.PharmacyProfiles
+        var pendingPharmacies = await _pharmacyProfiles
+            .Query()
             .CountAsync(p => p.ApprovalStatus == "Pending");
 
         counts.PendingDoctors = pendingDoctors;
@@ -476,7 +500,8 @@ public class AdminService : IAdminService
         counts.PendingApprovals = counts.PendingApprovalsTotal;
 
         // Get recent activity (last 20 audit events)
-        var recentEvents = await _db.AuditEvents
+        var recentEvents = await _auditEvents
+            .Query()
             .OrderByDescending(e => e.TimestampUtc)
             .Take(20)
             .ToListAsync();
@@ -515,7 +540,7 @@ public class AdminService : IAdminService
 
     public async Task<AdminAuditResponse> GetAuditAsync(AdminAuditRequest request)
     {
-        var query = _db.AuditEvents.AsQueryable();
+        var query = _auditEvents.Query();
 
         if (request.FromUtc.HasValue)
         {

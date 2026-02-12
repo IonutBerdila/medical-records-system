@@ -5,6 +5,11 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using MedicalRecords.Application.Validators;
+using MedicalRecords.Api.Middleware;
+using MedicalRecords.Application.Common;
 using MedicalRecords.Application.Admin;
 using MedicalRecords.Application.Auth;
 using MedicalRecords.Application.Audit;
@@ -32,6 +37,9 @@ var builder = WebApplication.CreateBuilder(args);
 // Add DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Generic repositories
+builder.Services.AddScoped(typeof(IRepository<>), typeof(EfRepository<>));
 
 // Add Identity
 builder.Services.AddIdentityCore<ApplicationUser>()
@@ -106,8 +114,16 @@ builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 
-// Add Controllers
-builder.Services.AddControllers();
+// ProblemDetails for consistent error responses (used by global exception handling)
+builder.Services.AddProblemDetails();
+
+// Add Controllers + FluentValidation
+builder.Services
+    .AddControllers()
+    .AddFluentValidation();
+
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
+builder.Services.AddFluentValidationAutoValidation();
 
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -200,6 +216,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Global exception handling (must run early in the pipeline)
+app.UseMiddleware<GlobalExceptionHandlingMiddleware>();
 
 app.UseCors("WebClient");
 

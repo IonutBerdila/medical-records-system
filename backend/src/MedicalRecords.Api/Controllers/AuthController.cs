@@ -20,17 +20,11 @@ public class AuthController : ControllerBase
     /// </summary>
     [HttpPost("register")]
     [ProducesResponseType(typeof(RegisterResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        try
-        {
-            var result = await _authService.RegisterAsync(request);
-            return CreatedAtAction(nameof(Register), result);
-        }
-        catch (AuthValidationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var result = await _authService.RegisterAsync(request);
+        return CreatedAtAction(nameof(Register), result);
     }
 
     /// <summary>
@@ -38,18 +32,11 @@ public class AuthController : ControllerBase
     /// </summary>
     [HttpPost("login")]
     [ProducesResponseType(typeof(LoginResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        try
-        {
-            var result = await _authService.LoginAsync(request);
-            return Ok(result);
-        }
-        catch (InvalidOperationException ex)
-        {
-            // Credentiale invalide sau utilizator inexistent
-            return Unauthorized(new { message = ex.Message });
-        }
+        var result = await _authService.LoginAsync(request);
+        return Ok(result);
     }
 }
 
