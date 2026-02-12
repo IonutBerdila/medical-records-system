@@ -11,6 +11,12 @@ public class PharmacyProfile
 
     public string PharmacyName { get; set; } = default!;
 
+    public string? FirstName { get; set; }
+
+    public string? LastName { get; set; }
+
+    public DateTime? DateOfBirth { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 
     /// <summary>

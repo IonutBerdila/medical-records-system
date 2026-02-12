@@ -74,79 +74,112 @@ public class AuthService : IAuthService
             throw new AuthValidationException(errors);
         }
 
-        // Creează profilul în funcție de rol
+        // Creează profilul în funcție de rol cu gestionare tranzacțională pentru a preveni înregistrări orfane
         var utcNow = DateTime.UtcNow;
+        var computedFullName = string.IsNullOrWhiteSpace(req.FullName)
+            ? string.Join(" ", new[] { req.FirstName, req.LastName }.Where(x => !string.IsNullOrWhiteSpace(x)))
+            : req.FullName;
 
-        switch (req.Role)
+        // Helper pentru a converti DateOfBirth la UTC (PostgreSQL necesită Kind=UTC)
+        DateTime? dateOfBirthUtc = null;
+        if (req.DateOfBirth.HasValue)
         {
-            case "Patient":
-                _dbContext.PatientProfiles.Add(new PatientProfile
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    FullName = req.FullName,
-                    CreatedAtUtc = utcNow
-                });
-                break;
-            case "Doctor":
-                var doctorProfile = new DoctorProfile
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    FullName = req.FullName,
-                    LicenseNumber = null,
-                    CreatedAtUtc = utcNow,
-                    ApprovalStatus = "Pending" // Doctor trebuie aprobat de admin
-                };
-                _dbContext.DoctorProfiles.Add(doctorProfile);
-                
-                // Log audit event pentru înregistrare Doctor
-                if (_auditService != null)
-                {
-                    await _auditService.LogAsync(new AuditEventCreate
-                    {
-                        TimestampUtc = utcNow,
-                        Action = "DOCTOR_REGISTRATION_CREATED",
-                        ActorUserId = user.Id,
-                        ActorRole = "Doctor",
-                        EntityType = "DoctorProfile",
-                        EntityId = doctorProfile.Id,
-                        MetadataJson = $"{{\"fullName\":\"{req.FullName}\",\"email\":\"{req.Email}\"}}"
-                    });
-                }
-                break;
-            case "Pharmacy":
-                var pharmacyProfile = new PharmacyProfile
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = user.Id,
-                    PharmacyName = req.FullName,
-                    CreatedAtUtc = utcNow,
-                    ApprovalStatus = "Pending" // Pharmacy trebuie aprobat de admin
-                };
-                _dbContext.PharmacyProfiles.Add(pharmacyProfile);
-                
-                // Log audit event pentru înregistrare Pharmacy
-                if (_auditService != null)
-                {
-                    await _auditService.LogAsync(new AuditEventCreate
-                    {
-                        TimestampUtc = utcNow,
-                        Action = "PHARMACY_REGISTRATION_CREATED",
-                        ActorUserId = user.Id,
-                        ActorRole = "Pharmacy",
-                        EntityType = "PharmacyProfile",
-                        EntityId = pharmacyProfile.Id,
-                        MetadataJson = $"{{\"pharmacyName\":\"{req.FullName}\",\"email\":\"{req.Email}\"}}"
-                    });
-                }
-                break;
-            case "Admin":
-                // Admin nu are profil asociat
-                break;
+            // Creează o nouă dată la miezul nopții UTC pentru a evita problemele cu Kind=Unspecified
+            dateOfBirthUtc = new DateTime(req.DateOfBirth.Value.Year, req.DateOfBirth.Value.Month, req.DateOfBirth.Value.Day, 0, 0, 0, DateTimeKind.Utc);
         }
 
-        await _dbContext.SaveChangesAsync();
+        // Folosim tranzacție pentru a asigura atomicitatea: dacă crearea profilului eșuează, utilizatorul este șters
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            switch (req.Role)
+            {
+                case "Patient":
+                    _dbContext.PatientProfiles.Add(new PatientProfile
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id,
+                        FullName = computedFullName,
+                        FirstName = req.FirstName,
+                        LastName = req.LastName,
+                        DateOfBirth = dateOfBirthUtc,
+                        CreatedAtUtc = utcNow
+                    });
+                    break;
+                case "Doctor":
+                    var doctorProfile = new DoctorProfile
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id,
+                        FullName = computedFullName,
+                        FirstName = req.FirstName,
+                        LastName = req.LastName,
+                        DateOfBirth = dateOfBirthUtc,
+                        LicenseNumber = req.DoctorLicenseNumber,
+                        CreatedAtUtc = utcNow,
+                        ApprovalStatus = "Pending" // Doctor trebuie aprobat de admin
+                    };
+                    _dbContext.DoctorProfiles.Add(doctorProfile);
+                    
+                    // Log audit event pentru înregistrare Doctor
+                    if (_auditService != null)
+                    {
+                        await _auditService.LogAsync(new AuditEventCreate
+                        {
+                            TimestampUtc = utcNow,
+                            Action = "DOCTOR_REGISTRATION_CREATED",
+                            ActorUserId = user.Id,
+                            ActorRole = "Doctor",
+                            EntityType = "DoctorProfile",
+                            EntityId = doctorProfile.Id,
+                            MetadataJson = $"{{\"fullName\":\"{computedFullName}\",\"email\":\"{req.Email}\"}}"
+                        });
+                    }
+                    break;
+                case "Pharmacy":
+                    var pharmacyProfile = new PharmacyProfile
+                    {
+                        Id = Guid.NewGuid(),
+                        UserId = user.Id,
+                        PharmacyName = computedFullName,
+                        FirstName = req.FirstName,
+                        LastName = req.LastName,
+                        DateOfBirth = dateOfBirthUtc,
+                        CreatedAtUtc = utcNow,
+                        ApprovalStatus = "Pending" // Pharmacy trebuie aprobat de admin
+                    };
+                    _dbContext.PharmacyProfiles.Add(pharmacyProfile);
+                    
+                    // Log audit event pentru înregistrare Pharmacy
+                    if (_auditService != null)
+                    {
+                        await _auditService.LogAsync(new AuditEventCreate
+                        {
+                            TimestampUtc = utcNow,
+                            Action = "PHARMACY_REGISTRATION_CREATED",
+                            ActorUserId = user.Id,
+                            ActorRole = "Pharmacy",
+                            EntityType = "PharmacyProfile",
+                            EntityId = pharmacyProfile.Id,
+                            MetadataJson = $"{{\"pharmacyName\":\"{computedFullName}\",\"email\":\"{req.Email}\"}}"
+                        });
+                    }
+                    break;
+                case "Admin":
+                    // Admin nu are profil asociat
+                    break;
+            }
+
+            await _dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            // Șterge utilizatorul creat dacă crearea profilului a eșuat pentru a preveni înregistrări orfane
+            await _userManager.DeleteAsync(user);
+            throw;
+        }
 
         return new RegisterResponse
         {
@@ -228,7 +261,7 @@ public class AuthService : IAuthService
         {
             profile = null; // Admin nu are profil dedicat în această fază
         }
-        else if (roles.Contains("Doctor"))
+            else if (roles.Contains("Doctor"))
         {
             var doctorProfile = await _dbContext.DoctorProfiles
                 .AsNoTracking()
@@ -239,6 +272,9 @@ public class AuthService : IAuthService
                 profile = new
                 {
                     doctorProfile.Id,
+                        doctorProfile.FirstName,
+                        doctorProfile.LastName,
+                        doctorProfile.DateOfBirth,
                     doctorProfile.FullName,
                     doctorProfile.LicenseNumber,
                     doctorProfile.CreatedAtUtc
@@ -256,6 +292,9 @@ public class AuthService : IAuthService
                 profile = new
                 {
                     pharmacyProfile.Id,
+                        pharmacyProfile.FirstName,
+                        pharmacyProfile.LastName,
+                        pharmacyProfile.DateOfBirth,
                     pharmacyProfile.PharmacyName,
                     pharmacyProfile.CreatedAtUtc
                 };
@@ -272,6 +311,9 @@ public class AuthService : IAuthService
                 profile = new
                 {
                     patientProfile.Id,
+                        patientProfile.FirstName,
+                        patientProfile.LastName,
+                        patientProfile.DateOfBirth,
                     patientProfile.FullName,
                     patientProfile.CreatedAtUtc
                 };

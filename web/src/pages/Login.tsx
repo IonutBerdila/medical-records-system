@@ -64,57 +64,57 @@ export const Login: React.FC = () => {
           </div>
           <div className="flex flex-1 flex-col justify-center px-8 lg:px-9 py-10 xl:py-14">
             <div className="max-w-[520px]">
-            <h1 className="text-[28px] xl:text-[42px] font-semibold leading-[1.15] tracking-[-0.01em] max-w-[500px]">
-              Administrare medicală securizată
-            </h1>
-            <p className="mt-3 xl:mt-4 text-teal-50 text-[15px] xl:text-[16px] leading-[1.45] max-w-[500px]">
-              Accesează istoricul medical complet oricând, oriunde, cu
-              securitate de nivel enterprise.
-            </p>
-            <ul className="mt-9 xl:mt-12 space-y-5 xl:space-y-7">
-              <li className="flex gap-4">
-                <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-teal-100">
-                  <IconShield className="h-5 w-5" />
-                </span>
-                <div>
-                  <span className="text-[17px] xl:text-[18px] font-semibold leading-tight text-white">
-                    Conform HIPAA &amp; securizat
+              <h1 className="text-[28px] xl:text-[42px] font-semibold leading-[1.15] tracking-[-0.01em] max-w-[500px]">
+                Administrare medicală securizată
+              </h1>
+              <p className="mt-3 xl:mt-4 text-teal-50 text-[15px] xl:text-[16px] leading-[1.45] max-w-[500px]">
+                Accesează istoricul medical complet oricând, oriunde, cu
+                securitate de nivel enterprise.
+              </p>
+              <ul className="mt-9 xl:mt-12 space-y-5 xl:space-y-7">
+                <li className="flex gap-4">
+                  <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-teal-100">
+                    <IconShield className="h-5 w-5" />
                   </span>
-                  <p className="mt-1.5 text-[15px] xl:text-[16px] leading-[1.4] text-teal-100/90">
-                    Criptare end-to-end pentru informațiile tale medicale
-                    sensibile.
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-4">
-                <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-teal-100">
-                  <IconClock className="h-5 w-5" />
-                </span>
-                <div>
-                  <span className="text-[17px] xl:text-[18px] font-semibold leading-tight text-white">
-                    Acces 24/7
+                  <div>
+                    <span className="text-[17px] xl:text-[18px] font-semibold leading-tight text-white">
+                      Conform HIPAA &amp; securizat
+                    </span>
+                    <p className="mt-1.5 text-[15px] xl:text-[16px] leading-[1.4] text-teal-100/90">
+                      Criptare end-to-end pentru informațiile tale medicale
+                      sensibile.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-4">
+                  <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-teal-100">
+                    <IconClock className="h-5 w-5" />
                   </span>
-                  <p className="mt-1.5 text-[15px] xl:text-[16px] leading-[1.4] text-teal-100/90">
-                    Vezi fișa medicală, rețetele și rezultatele ori de câte ori
-                    ai nevoie.
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-4">
-                <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-teal-100">
-                  <IconUsers className="h-5 w-5" />
-                </span>
-                <div>
-                  <span className="text-[17px] xl:text-[18px] font-semibold leading-tight text-white">
-                    Partajare cu furnizorii
+                  <div>
+                    <span className="text-[17px] xl:text-[18px] font-semibold leading-tight text-white">
+                      Acces 24/7
+                    </span>
+                    <p className="mt-1.5 text-[15px] xl:text-[16px] leading-[1.4] text-teal-100/90">
+                      Vezi fișa medicală, rețetele și rezultatele ori de câte
+                      ori ai nevoie.
+                    </p>
+                  </div>
+                </li>
+                <li className="flex gap-4">
+                  <span className="mt-0.5 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-teal-100">
+                    <IconUsers className="h-5 w-5" />
                   </span>
-                  <p className="mt-1.5 text-[15px] xl:text-[16px] leading-[1.4] text-teal-100/90">
-                    Partajează în siguranță istoricul tău medical cu
-                    profesioniștii din sănătate.
-                  </p>
-                </div>
-              </li>
-            </ul>
+                  <div>
+                    <span className="text-[17px] xl:text-[18px] font-semibold leading-tight text-white">
+                      Partajare cu furnizorii
+                    </span>
+                    <p className="mt-1.5 text-[15px] xl:text-[16px] leading-[1.4] text-teal-100/90">
+                      Partajează în siguranță istoricul tău medical cu
+                      profesioniștii din sănătate.
+                    </p>
+                  </div>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
@@ -140,18 +140,19 @@ export const Login: React.FC = () => {
               <Input
                 label="Adresă de email"
                 type="email"
-                placeholder="Numele@exemplu.com"
+                placeholder="Nume@exemplu.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                showRequiredMark={false}
                 required
               />
               <Input
                 label="Parolă"
                 type="password"
-                placeholder="Introdu parola"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 showPasswordToggle
+                showRequiredMark={false}
                 required
               />
               <div className="flex items-center justify-between text-sm">

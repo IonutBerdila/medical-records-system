@@ -11,6 +11,12 @@ public class PatientProfile
 
     public string FullName { get; set; } = default!;
 
+    public string? FirstName { get; set; }
+
+    public string? LastName { get; set; }
+
+    public DateTime? DateOfBirth { get; set; }
+
     public DateTime CreatedAtUtc { get; set; }
 }
 

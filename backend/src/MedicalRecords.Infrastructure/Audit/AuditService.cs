@@ -16,10 +16,19 @@ public class AuditService : IAuditService
 
     public async Task LogAsync(AuditEventCreate request)
     {
+        // Asigurăm că TimestampUtc este mereu în UTC (PostgreSQL cere Kind=Utc pentru timestamptz)
+        var timestamp = request.TimestampUtc == default
+            ? DateTime.UtcNow
+            : request.TimestampUtc;
+        if (timestamp.Kind != DateTimeKind.Utc)
+        {
+            timestamp = DateTime.SpecifyKind(timestamp, DateTimeKind.Utc);
+        }
+
         var entity = new AuditEvent
         {
             Id = Guid.NewGuid(),
-            TimestampUtc = request.TimestampUtc == default ? DateTime.UtcNow : request.TimestampUtc,
+            TimestampUtc = timestamp,
             Action = request.Action,
             ActorUserId = request.ActorUserId,
             ActorRole = request.ActorRole,

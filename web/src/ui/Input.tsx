@@ -6,6 +6,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   helper?: string;
   error?: string;
   showPasswordToggle?: boolean;
+  showRequiredMark?: boolean;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -16,6 +17,7 @@ export const Input: React.FC<InputProps> = ({
   id,
   type,
   showPasswordToggle,
+  showRequiredMark = true,
   ...rest
 }) => {
   const inputId = id ?? (label ? label.replace(/\s+/g, '-').toLowerCase() : undefined);
@@ -29,7 +31,7 @@ export const Input: React.FC<InputProps> = ({
       {label && (
         <label htmlFor={inputId} className="text-sm font-medium text-slate-700">
           {label}
-          {rest.required && <span className="text-red-500 ml-0.5">*</span>}
+          {rest.required && showRequiredMark && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
       <div className="relative">

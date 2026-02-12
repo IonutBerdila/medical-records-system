@@ -5,6 +5,10 @@ export interface RegisterRequest {
   password: string;
   role: UserRole;
   fullName: string;
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string; // ISO date (YYYY-MM-DD)
+  doctorLicenseNumber?: string;
 }
 
 export interface RegisterResponse {
