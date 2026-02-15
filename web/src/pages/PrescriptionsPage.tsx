@@ -13,7 +13,7 @@ export const PrescriptionsPage: React.FC = () => {
       .then(setList)
       .catch((err: any) => {
         const msg =
-          err?.response?.data?.message || err?.response?.data?.title || err?.message || 'Eroare la încărcare';
+          err?.response?.data?.message || err?.response?.data?.title || err?.message || 'Eroare la Ã®ncÄƒrcare';
         toast.error(msg);
       })
       .finally(() => setLoading(false));
@@ -29,10 +29,10 @@ export const PrescriptionsPage: React.FC = () => {
 
   return (
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-slate-900">Rețete</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">Prescripții</h1>
         {list.length === 0 ? (
           <Card className="p-6 text-center text-sm text-slate-600">
-            Nu ai rețete înregistrate.
+            Nu ai prescripții înregistrate.
           </Card>
         ) : (
           <div className="flex flex-col gap-3">
@@ -47,15 +47,15 @@ export const PrescriptionsPage: React.FC = () => {
                 )}
                 {p.validUntilUtc && (
                   <p className="mt-1 text-xs text-slate-600">
-                    Valabilă până: {new Date(p.validUntilUtc).toLocaleDateString('ro-RO')}
+                    ValabilÄƒ pÃ¢nÄƒ: {new Date(p.validUntilUtc).toLocaleDateString('ro-RO')}
                   </p>
                 )}
                 <p className="mt-1 text-xs text-slate-600">
-                  {new Date(p.createdAtUtc).toLocaleDateString('ro-RO')} · Status: {p.status}
+                  {new Date(p.createdAtUtc).toLocaleDateString('ro-RO')} Â· Status: {p.status}
                 </p>
                 {p.dispensedAtUtc && (
                   <p className="mt-1 text-xs text-emerald-700">
-                    Eliberată la: {new Date(p.dispensedAtUtc).toLocaleString('ro-RO')}
+                    EliberatÄƒ la: {new Date(p.dispensedAtUtc).toLocaleString('ro-RO')}
                   </p>
                 )}
               </Card>
@@ -65,3 +65,5 @@ export const PrescriptionsPage: React.FC = () => {
       </div>
   );
 };
+
+

@@ -16,6 +16,15 @@ export const IconDocument: React.FC<{ className?: string }> = ({ className = '' 
   </svg>
 );
 
+export const IconPrescription: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`h-5 w-5 ${iconClass} ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <g transform="rotate(-45 12 12)">
+      <rect x="4" y="8.5" width="16" height="7" rx="3.5" strokeWidth={2} />
+      <line x1="12" y1="8.5" x2="12" y2="15.5" strokeWidth={2} strokeLinecap="round" />
+    </g>
+  </svg>
+);
+
 export const IconPill: React.FC<{ className?: string }> = ({ className = '' }) => (
   <svg className={`h-5 w-5 ${iconClass} ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
@@ -43,6 +52,18 @@ export const IconShield: React.FC<{ className?: string }> = ({ className = '' })
 export const IconClock: React.FC<{ className?: string }> = ({ className = '' }) => (
   <svg className={`h-5 w-5 ${iconClass} ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+export const IconCalendar: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`h-5 w-5 ${iconClass} ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+export const IconAnalytics: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg className={`h-5 w-5 ${iconClass} ${className}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12h3l2-6 4 12 3-8 2 2h4" />
   </svg>
 );
 
@@ -74,14 +95,12 @@ export const IconPulse: React.FC<{ className?: string; light?: boolean }> = ({ c
 /** Eye icon for password visibility toggle */
 export const IconEye: React.FC<{ className?: string }> = ({ className = '' }) => (
   <svg className={`h-5 w-5 ${iconClass} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    {/* Outer eye */}
     <path
       d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"
       strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-    {/* Pupil */}
     <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
   </svg>
 );
@@ -89,21 +108,13 @@ export const IconEye: React.FC<{ className?: string }> = ({ className = '' }) =>
 /** Eye-slash icon for password visibility toggle (hidden state) */
 export const IconEyeSlash: React.FC<{ className?: string }> = ({ className = '' }) => (
   <svg className={`h-5 w-5 ${iconClass} ${className}`} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    {/* Outer eye */}
     <path
       d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"
       strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-    {/* Pupil (offset a bit when slashed, optional) */}
     <circle cx="12" cy="12" r="3" strokeWidth={1.8} />
-    {/* Slash line */}
-    <path
-      d="M5 5l14 14"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <path d="M5 5l14 14" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );

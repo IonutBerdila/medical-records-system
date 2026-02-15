@@ -12,11 +12,16 @@ import { PrescriptionsPage } from '../pages/PrescriptionsPage';
 import { ShareAccessPage } from '../pages/ShareAccessPage';
 import { DoctorPatientsPage } from '../pages/DoctorPatientsPage';
 import { DoctorPatientDetailPage } from '../pages/DoctorPatientDetailPage';
+import { DoctorAppointmentsPage } from '../pages/DoctorAppointmentsPage';
+import { DoctorAnalyticsPage } from '../pages/DoctorAnalyticsPage';
 import { PharmacyPage } from '../pages/PharmacyPage';
 import { PharmacyPrescriptionPage } from '../pages/PharmacyPrescriptionPage';
 import { AdminPage } from '../pages/AdminPage';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { AdminAuditPage } from '../pages/AdminAuditPage';
+import { AdminApprovalsPage } from '../pages/AdminApprovalsPage';
+import { AdminReportsPage } from '../pages/AdminReportsPage';
+import { AdminConfigPage } from '../pages/AdminConfigPage';
 import { RequireAuth } from './auth/RequireAuth';
 import { RequireRole } from './auth/RequireRole';
 import { AppShell } from '../ui/AppShell';
@@ -74,6 +79,18 @@ export const AppRouter: React.FC = () => {
           }
         />
         <Route
+          path="/appointments"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Patient']}>
+                <AppShell>
+                  <TimelinePage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/prescriptions"
           element={
             <RequireAuth>
@@ -116,6 +133,30 @@ export const AppRouter: React.FC = () => {
               <RequireRole allowedRoles={['Doctor']}>
                 <AppShell>
                   <DoctorPatientDetailPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/doctor/appointments"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Doctor']}>
+                <AppShell>
+                  <DoctorAppointmentsPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/doctor/analytics"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Doctor']}>
+                <AppShell>
+                  <DoctorAnalyticsPage />
                 </AppShell>
               </RequireRole>
             </RequireAuth>
@@ -181,9 +222,44 @@ export const AppRouter: React.FC = () => {
             </RequireAuth>
           }
         />
+        <Route
+          path="/admin/approvals"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Admin']}>
+                <AppShell>
+                  <AdminApprovalsPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Admin']}>
+                <AppShell>
+                  <AdminReportsPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/config"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Admin']}>
+                <AppShell>
+                  <AdminConfigPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
         <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
     </BrowserRouter>
   );
 };
-
