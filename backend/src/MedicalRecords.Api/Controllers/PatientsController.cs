@@ -127,6 +127,34 @@ public class PatientsController : ControllerBase
         }
     }
 
+    [HttpGet("{patientUserId:guid}/prescriptions", Name = nameof(GetPatientPrescriptions))]
+    [ProducesResponseType(typeof(IReadOnlyList<PrescriptionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetPatientPrescriptions(Guid patientUserId)
+    {
+        var doctorUserId = GetCurrentUserId();
+        if (doctorUserId == null) return Unauthorized();
+
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(doctorUserId.Value, "Doctor");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+
+        try
+        {
+            var result = await _prescriptionService.GetPrescriptionsForPatientAsync(doctorUserId.Value, patientUserId);
+            return Ok(result);
+        }
+        catch (ConsentDeniedException ex)
+        {
+            return StatusCode(403, new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{patientUserId:guid}/prescriptions")]
     [ProducesResponseType(typeof(PrescriptionDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -9,18 +9,8 @@ import { Skeleton } from '../ui/Skeleton';
 import { Badge } from '../ui/Badge';
 import { IconDocumentEmpty } from '../ui/Icons';
 import { getMyPatients } from '../app/doctor/doctorApi';
+import { getInitials } from '../app/utils/initials';
 import type { DoctorPatientDto } from '../app/doctor/types';
-
-function initials(name?: string, email?: string, id?: string): string {
-  if (name) {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  }
-  if (email) return email.slice(0, 2).toUpperCase();
-  if (id) return id.slice(0, 2).toUpperCase();
-  return '?';
-}
 
 export const DoctorPatientsPage: React.FC = () => {
   const [patients, setPatients] = useState<DoctorPatientDto[]>([]);
@@ -59,10 +49,6 @@ export const DoctorPatientsPage: React.FC = () => {
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-semibold text-slate-900">Pacienții mei</h1>
-          <p className="mt-1 text-slate-600">Gestionează și vizualizează fișele pacienților.</p>
-        </div>
         <div className="grid gap-4 sm:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-24 rounded-xl" />
@@ -78,11 +64,6 @@ export const DoctorPatientsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold text-slate-900">Pacienții mei</h1>
-        <p className="mt-1 text-slate-600">Gestionează și vizualizează fișele pacienților.</p>
-      </div>
-
       {/* Stats cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="p-4">
@@ -154,7 +135,7 @@ export const DoctorPatientsPage: React.FC = () => {
                     <Td>
                       <div className="flex items-center gap-3">
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-teal-100 text-sm font-semibold text-teal-700">
-                          {initials(p.fullName, p.email, p.patientUserId)}
+                          {getInitials(p.fullName, p.email, p.patientUserId)}
                         </span>
                         <span className="font-medium text-slate-900">
                           {p.fullName || p.email || p.patientUserId}
@@ -172,7 +153,7 @@ export const DoctorPatientsPage: React.FC = () => {
                     <Td className="text-right">
                       <button
                         type="button"
-                        onClick={() => navigate(`/doctor/patients/${p.patientUserId}`)}
+                        onClick={() => navigate(`/doctor/patients/${p.patientUserId}`, { state: { fullName: p.fullName, email: p.email } })}
                         className="text-sm font-medium text-teal-600 hover:underline"
                       >
                         Deschide

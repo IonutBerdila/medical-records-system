@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Card, CardHeader, CardContent } from '../ui/Card';
 import { Input } from '../ui/Input';
@@ -9,17 +9,14 @@ import { Tabs } from '../ui/Tabs';
 import { EmptyState } from '../ui/EmptyState';
 import { getPatientRecord } from '../app/records/recordsApi';
 import { getPatientEntries, addPatientEntry } from '../app/entries/entriesApi';
-import { createPatientPrescription } from '../app/prescriptions/prescriptionsApi';
+import { getPatientPrescriptions, createPatientPrescription } from '../app/prescriptions/prescriptionsApi';
 import type { MedicalRecordDto } from '../app/records/types';
 import type { MedicalEntryDto } from '../app/entries/types';
 import type { CreateMedicalEntryRequest } from '../app/entries/types';
-import type { CreatePrescriptionRequest } from '../app/prescriptions/types';
+import type { CreatePrescriptionRequest, PrescriptionDto } from '../app/prescriptions/types';
+import { getInitials } from '../app/utils/initials';
 
 const ENTRY_TYPES = ['Diagnosis', 'Visit', 'Note', 'LabResult'];
-
-function initials(id: string): string {
-  return id.slice(0, 2).toUpperCase();
-}
 
 function formatTags(arr: string | string[] | undefined): string {
   if (!arr) return '—';
@@ -27,13 +24,23 @@ function formatTags(arr: string | string[] | undefined): string {
   return list.filter(Boolean).join(', ') || '—';
 }
 
+const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';
+function hasRecordData(r: MedicalRecordDto | null): boolean {
+  if (!r) return false;
+  if (r.id === EMPTY_GUID || !r.id) return false;
+  return true;
+}
+
 export const DoctorPatientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const patientUserId = id ?? '';
+  const { fullName, email } = (location.state as { fullName?: string; email?: string } | null) ?? {};
 
   const [record, setRecord] = useState<MedicalRecordDto | null>(null);
   const [entries, setEntries] = useState<MedicalEntryDto[]>([]);
+  const [prescriptions, setPrescriptions] = useState<PrescriptionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [entryForm, setEntryForm] = useState<CreateMedicalEntryRequest>({
@@ -51,21 +58,38 @@ export const DoctorPatientDetailPage: React.FC = () => {
 
   const load = () => {
     if (!patientUserId) return;
-    Promise.all([getPatientRecord(patientUserId), getPatientEntries(patientUserId)])
-      .then(([r, e]) => {
-        setRecord(r);
-        setEntries(e);
-      })
-      .catch((err: unknown) => {
-        const msg =
-          (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          (err as { response?: { data?: { title?: string } }; message?: string })?.response?.data?.title ||
-          (err as { message?: string })?.message ||
-          'Eroare la încărcare';
-        toast.error(msg);
-        if ((err as { response?: { status?: number } })?.response?.status === 403) navigate('/doctor/patients');
-      })
-      .finally(() => setLoading(false));
+    const status = (e: unknown) => (e as { response?: { status?: number } })?.response?.status;
+    const msg = (e: unknown) =>
+      (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+      (e as { response?: { data?: { title?: string } } })?.response?.data?.title ||
+      (e as { message?: string })?.message ||
+      'Eroare la încărcare';
+
+    Promise.allSettled([
+      getPatientRecord(patientUserId),
+      getPatientEntries(patientUserId),
+      getPatientPrescriptions(patientUserId)
+    ]).then(([rRes, eRes, pRes]) => {
+      if (rRes.status === 'fulfilled') setRecord(rRes.value);
+      else {
+        if (status(rRes.reason) === 403) navigate('/doctor/patients');
+        else if (status(rRes.reason) === 405) toast.error('Endpoint fișă medicală indisponibil (405). Reporniți API-ul.');
+        else toast.error(`Fișă medicală: ${msg(rRes.reason)}`);
+      }
+      if (eRes.status === 'fulfilled') setEntries(eRes.value);
+      else {
+        if (status(eRes.reason) === 403) navigate('/doctor/patients');
+        else if (status(eRes.reason) === 405) toast.error('Endpoint intrări indisponibil (405). Reporniți API-ul.');
+        else toast.error(`Intrări: ${msg(eRes.reason)}`);
+      }
+      if (pRes.status === 'fulfilled') setPrescriptions(pRes.value);
+      else {
+        if (status(pRes.reason) === 403) navigate('/doctor/patients');
+        else if (status(pRes.reason) === 405) toast.error('Endpoint prescripții indisponibil (405). Reporniți API-ul.');
+        else toast.error(`Prescripții: ${msg(pRes.reason)}`);
+      }
+      setLoading(false);
+    });
   };
 
   useEffect(() => {
@@ -100,7 +124,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
     setSubmittingPrescription(true);
     try {
       await createPatientPrescription(patientUserId, prescriptionForm);
-      toast.success('Rețetă creată.');
+      toast.success('Prescripție creată.');
       setPrescriptionForm({ medicationName: '', dosage: '', instructions: '' });
       load();
     } catch (err: unknown) {
@@ -119,7 +143,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
   const tabItems = [
     { id: 'overview', label: 'Prezentare generală' },
     { id: 'timeline', label: 'Timeline' },
-    { id: 'prescriptions', label: 'Rețete' }
+    { id: 'prescriptions', label: 'Prescripții' }
   ];
 
   if (loading) {
@@ -144,8 +168,8 @@ export const DoctorPatientDetailPage: React.FC = () => {
           Pacienți
         </button>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setActiveTab('prescriptions')}>
-            Adaugă rețetă
+          <Button onClick={() => setActiveTab('prescriptions')}>
+            + Adaugă prescripție
           </Button>
           <Button onClick={() => setActiveTab('timeline')}>
             + Adaugă intrare medicală
@@ -157,8 +181,8 @@ export const DoctorPatientDetailPage: React.FC = () => {
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-6 py-5">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-teal-100 text-xl font-semibold text-teal-700">
-              {initials(patientUserId)}
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-teal-100 text-xl font-semibold text-teal-700">
+              {getInitials(fullName, email, patientUserId)}
             </div>
             <div>
               <h1 className="text-xl font-semibold text-slate-900">Pacient</h1>
@@ -185,7 +209,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
             <h2 className="text-xl font-semibold text-slate-900">Fișă medicală</h2>
           </CardHeader>
           <CardContent className="space-y-3">
-            {record ? (
+            {hasRecordData(record) ? (
               <>
                 <p className="text-sm text-slate-600">
                   <span className="font-medium text-slate-700">Grupă sanguină:</span> {record.bloodType || '—'}
@@ -327,7 +351,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold text-slate-900">Creează rețetă</h2>
+              <h2 className="text-xl font-semibold text-slate-900">Creează prescripție</h2>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleCreatePrescription}>
@@ -359,7 +383,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
                 </div>
                 <div className="flex gap-2 sm:col-span-2">
                   <Button type="submit" loading={submittingPrescription}>
-                    Salvează rețetă
+                    Salvează prescripție
                   </Button>
                   <Button
                     type="button"
@@ -374,10 +398,34 @@ export const DoctorPatientDetailPage: React.FC = () => {
               </form>
             </CardContent>
           </Card>
-          <EmptyState
-            title="Lista de rețete"
-            description="Rețetele create aici apar în contul pacientului, la secțiunea Rețete. Nu există endpoint pentru listarea rețetelor pacientului din această pagină."
-          />
+
+          <div>
+            <h2 className="mb-3 text-xl font-semibold text-slate-900">Lista de prescripții</h2>
+            {prescriptions.length === 0 ? (
+              <EmptyState
+                title="Nu există prescripții încă"
+                description="Prescripțiile create aici apar în lista de mai jos și în contul pacientului."
+              />
+            ) : (
+              <ul className="space-y-2">
+                {prescriptions.map((p) => (
+                  <Card key={p.id} className="p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium text-slate-900">{p.medicationName}</span>
+                      <span className="text-xs text-slate-500">
+                        {new Date(p.createdAtUtc).toLocaleString('ro-RO')}
+                      </span>
+                    </div>
+                    {(p.dosage || p.instructions) && (
+                      <p className="mt-2 text-sm text-slate-600">
+                        {[p.dosage, p.instructions].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                  </Card>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </div>

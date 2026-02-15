@@ -6,6 +6,11 @@ export async function getMyPrescriptions(): Promise<PrescriptionDto[]> {
   return data;
 }
 
+export async function getPatientPrescriptions(patientUserId: string): Promise<PrescriptionDto[]> {
+  const { data } = await http.get<PrescriptionDto[]>(`/api/patients/${patientUserId}/prescriptions`);
+  return data;
+}
+
 export async function createPatientPrescription(
   patientUserId: string,
   body: CreatePrescriptionRequest

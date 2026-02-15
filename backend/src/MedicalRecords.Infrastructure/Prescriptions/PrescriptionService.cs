@@ -28,6 +28,20 @@ public class PrescriptionService : IPrescriptionService
         return list.Select(ToDto).ToList();
     }
 
+    public async Task<IReadOnlyList<PrescriptionDto>> GetPrescriptionsForPatientAsync(Guid doctorUserId, Guid patientUserId)
+    {
+        var hasAccess = await _consentService.HasActiveAccessAsync(patientUserId, doctorUserId);
+        if (!hasAccess)
+            throw new ConsentDeniedException();
+
+        var list = await _db.Prescriptions
+            .AsNoTracking()
+            .Where(p => p.PatientUserId == patientUserId)
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToListAsync();
+        return list.Select(ToDto).ToList();
+    }
+
     public async Task<PrescriptionDto> CreatePrescriptionForPatientAsync(Guid doctorUserId, Guid patientUserId, CreatePrescriptionRequest req)
     {
         var hasAccess = await _consentService.HasActiveAccessAsync(patientUserId, doctorUserId);
