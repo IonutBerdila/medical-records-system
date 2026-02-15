@@ -117,9 +117,14 @@ builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 // ProblemDetails for consistent error responses (used by global exception handling)
 builder.Services.AddProblemDetails();
 
-// Add Controllers + FluentValidation
+// Add Controllers + FluentValidation (explicit camelCase for JSON)
 builder.Services
     .AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    })
     .AddFluentValidation();
 
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
@@ -161,9 +166,19 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Seed roluri și admin user la startup
+// Aplicare migrații + repair schema + seed roluri și admin user la startup
 using (var scope = app.Services.CreateScope())
 {
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    dbContext.Database.Migrate();
+
+    // Repair: ensure MedicalRecord columns exist (idempotent when EF migrations are out of sync)
+    await dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""MedicalRecords"" ADD COLUMN IF NOT EXISTS ""AdverseDrugReactions"" text NULL;");
+    await dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""MedicalRecords"" ADD COLUMN IF NOT EXISTS ""CurrentMedications"" text NULL;");
+    await dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""MedicalRecords"" ADD COLUMN IF NOT EXISTS ""MajorSurgeriesHospitalizations"" text NULL;");
+    await dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""MedicalRecords"" ADD COLUMN IF NOT EXISTS ""EmergencyContactRelation"" text NULL;");
+    await dbContext.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""MedicalRecords"" ADD COLUMN IF NOT EXISTS ""EmergencyContactsJson"" text NULL;");
+
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();

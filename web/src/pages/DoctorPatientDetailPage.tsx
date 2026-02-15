@@ -21,6 +21,12 @@ function initials(id: string): string {
   return id.slice(0, 2).toUpperCase();
 }
 
+function formatTags(arr: string | string[] | undefined): string {
+  if (!arr) return '—';
+  const list = Array.isArray(arr) ? arr : [arr];
+  return list.filter(Boolean).join(', ') || '—';
+}
+
 export const DoctorPatientDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -161,8 +167,8 @@ export const DoctorPatientDetailPage: React.FC = () => {
                 {record?.bloodType && (
                   <Badge variant="error">Grupă: {record.bloodType}</Badge>
                 )}
-                {record?.allergies && (
-                  <Badge variant="warning">Alergie: {record.allergies}</Badge>
+                {record?.allergies && record.allergies.length > 0 && (
+                  <Badge variant="warning">Alergie: {formatTags(record.allergies)}</Badge>
                 )}
                 <Badge variant="success">Pacient activ</Badge>
               </div>
@@ -185,13 +191,49 @@ export const DoctorPatientDetailPage: React.FC = () => {
                   <span className="font-medium text-slate-700">Grupă sanguină:</span> {record.bloodType || '—'}
                 </p>
                 <p className="text-sm text-slate-600">
-                  <span className="font-medium text-slate-700">Alergii:</span> {record.allergies || '—'}
+                  <span className="font-medium text-slate-700">Alergii:</span> {formatTags(record.allergies)}
                 </p>
-                {(record.emergencyContactName || record.emergencyContactPhone) && (
+                {record.adverseDrugReactions && record.adverseDrugReactions.length > 0 && (
                   <p className="text-sm text-slate-600">
-                    <span className="font-medium text-slate-700">Contact urgență:</span>{' '}
-                    {record.emergencyContactName} {record.emergencyContactPhone}
+                    <span className="font-medium text-slate-700">Reacții adverse la medicamente:</span>{' '}
+                    {formatTags(record.adverseDrugReactions)}
                   </p>
+                )}
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium text-slate-700">Afecțiuni cronice:</span>{' '}
+                  {formatTags(record.chronicConditions)}
+                </p>
+                {record.currentMedications && (
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-700">Medicație curentă:</span>{' '}
+                    {record.currentMedications}
+                  </p>
+                )}
+                {record.majorSurgeriesHospitalizations && (
+                  <p className="text-sm text-slate-600">
+                    <span className="font-medium text-slate-700">Intervenții/spitalizări:</span>{' '}
+                    {record.majorSurgeriesHospitalizations}
+                  </p>
+                )}
+                {((record.emergencyContacts && record.emergencyContacts.length > 0) ||
+                  record.emergencyContactName ||
+                  record.emergencyContactPhone) && (
+                  <div className="space-y-1">
+                    <span className="font-medium text-slate-700">Contact urgență:</span>
+                    {record.emergencyContacts && record.emergencyContacts.length > 0
+                      ? record.emergencyContacts.map((c, i) => (
+                          <p key={i} className="text-sm text-slate-600 pl-4">
+                            {[c.name, c.relation, c.phone].filter(Boolean).join(' · ') || '—'}
+                          </p>
+                        ))
+                      : (
+                          <p className="text-sm text-slate-600 pl-4">
+                            {[record.emergencyContactName, record.emergencyContactRelation, record.emergencyContactPhone]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        )}
+                  </div>
                 )}
               </>
             ) : (
