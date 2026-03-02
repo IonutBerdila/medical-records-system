@@ -65,6 +65,11 @@ export const TimelinePage: React.FC = () => {
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                       {e.type}
                     </span>
+                    {(e.createdByDoctorFullName || e.createdByInstitutionName) && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {[e.createdByDoctorFullName && `Dr. ${e.createdByDoctorFullName}`, e.createdByInstitutionName].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     <h3 className="mt-1 font-medium text-slate-900">{e.title}</h3>
                     {e.description && (
                       <p className="mt-1 text-sm text-mutedText">{e.description}</p>

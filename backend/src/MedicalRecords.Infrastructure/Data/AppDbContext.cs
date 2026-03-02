@@ -20,6 +20,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
     public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
     public DbSet<MedicalEntry> MedicalEntries => Set<MedicalEntry>();
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
+    public DbSet<PrescriptionItem> PrescriptionItems => Set<PrescriptionItem>();
     public DbSet<PatientDoctorAccess> PatientDoctorAccesses => Set<PatientDoctorAccess>();
     public DbSet<Domain.Entities.ShareToken> ShareTokens => Set<Domain.Entities.ShareToken>();
     public DbSet<PharmacyVerificationSession> PharmacyVerificationSessions => Set<PharmacyVerificationSession>();
@@ -120,6 +121,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => x.PatientUserId);
             entity.HasIndex(x => x.DoctorUserId);
+            entity.Property(x => x.Status).HasMaxLength(50);
             entity.HasOne<ApplicationUser>()
                 .WithMany()
                 .HasForeignKey(x => x.PatientUserId)
@@ -128,6 +130,18 @@ public class AppDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid
                 .WithMany()
                 .HasForeignKey(x => x.DoctorUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // PrescriptionItem — cascade delete when prescription is deleted
+        builder.Entity<PrescriptionItem>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.PrescriptionId);
+            entity.Property(x => x.Status).HasMaxLength(50);
+            entity.HasOne(x => x.Prescription)
+                .WithMany(x => x.Items)
+                .HasForeignKey(x => x.PrescriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // PatientDoctorAccess (consent)

@@ -109,15 +109,14 @@ public class PharmacyController : ControllerBase
     public class DispenseRequest
     {
         public Guid VerificationId { get; set; }
-        public Guid PrescriptionId { get; set; }
+        public List<Guid> PrescriptionItemIds { get; set; } = new();
     }
 
-    /// <summary>Marchează o prescripție ca eliberată în contextul unei sesiuni de verificare valide.</summary>
+    /// <summary>Marchează itemurile selectate ca eliberate. Returnează lista actualizată de prescripții.</summary>
     [HttpPost("dispense")]
-    [ProducesResponseType(typeof(PharmacyPrescriptionDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(IReadOnlyList<PharmacyPrescriptionDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Dispense([FromBody] DispenseRequest request)
     {
@@ -133,22 +132,21 @@ public class PharmacyController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
         }
 
+        if (request?.PrescriptionItemIds == null || request.PrescriptionItemIds.Count == 0)
+            return BadRequest(new { message = "Selectați cel puțin un medicament de eliberat." });
+
         try
         {
-            var result = await _pharmacyService.DispensePrescriptionAsync(pharmacyUserId.Value, request.VerificationId, request.PrescriptionId);
+            var result = await _pharmacyService.DispensePrescriptionItemsAsync(pharmacyUserId.Value, request.VerificationId, request.PrescriptionItemIds);
             return Ok(result);
         }
         catch (PharmacySessionInvalidException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (PrescriptionAlreadyDispensedException ex)
+        catch (PrescriptionItemAlreadyDispensedException ex)
         {
             return StatusCode(StatusCodes.Status409Conflict, new { message = ex.Message });
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound(new { message = "Prescripția nu a fost găsită." });
         }
     }
 }

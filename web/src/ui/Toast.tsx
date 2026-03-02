@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast';
 
 export const ToastHost: React.FC = () => (
   <Toaster
-    position="top-right"
+    position="top-center"
     toastOptions={{
       className: '',
       style: {

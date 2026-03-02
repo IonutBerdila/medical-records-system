@@ -6,13 +6,13 @@ export async function verifyShareTokenV2(body: VerifyShareTokenRequest): Promise
   return data;
 }
 
-export async function dispensePrescription(
+export async function dispensePrescriptionItems(
   verificationId: string,
-  prescriptionId: string
-): Promise<PharmacyPrescriptionDto> {
-  const { data } = await http.post<PharmacyPrescriptionDto>('/api/pharmacy/dispense', {
+  prescriptionItemIds: string[]
+): Promise<PharmacyPrescriptionDto[]> {
+  const { data } = await http.post<PharmacyPrescriptionDto[]>('/api/pharmacy/dispense', {
     verificationId,
-    prescriptionId
+    prescriptionItemIds
   });
   return data;
 }

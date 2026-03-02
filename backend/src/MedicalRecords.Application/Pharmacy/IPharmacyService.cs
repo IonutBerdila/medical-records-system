@@ -5,8 +5,8 @@ namespace MedicalRecords.Application.Pharmacy;
 public interface IPharmacyService
 {
     /// <summary>
-    /// Marchează o prescripție ca eliberată (dispensed) în contextul unei sesiuni de verificare valide.
+    /// Marchează itemurile selectate ca eliberate. Returnează lista actualizată de prescripții (doar cele care mai au itemuri în așteptare).
     /// </summary>
-    Task<PharmacyPrescriptionDto> DispensePrescriptionAsync(Guid pharmacyUserId, Guid verificationId, Guid prescriptionId);
+    Task<IReadOnlyList<PharmacyPrescriptionDto>> DispensePrescriptionItemsAsync(Guid pharmacyUserId, Guid verificationId, IReadOnlyList<Guid> prescriptionItemIds);
 }
 

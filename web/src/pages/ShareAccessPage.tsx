@@ -176,8 +176,7 @@ export const ShareAccessPage: React.FC = () => {
       <Card className="p-6">
         <h2 className="text-xl font-semibold text-slate-900">Token pentru farmacie</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Generează un token temporar (one-time) de <span className="font-mono font-semibold">10 caractere</span> pe care îl poți da
-          farmaciei pentru a vedea rețetele tale. Tokenul se afișează o singură dată.
+          Generează un token temporar farmaciei pentru a vedea prescripțiile. Tokenul se afișează o singură dată.
         </p>
         {!shareTokenResult ? (
           <form className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={handleCreateShareToken}>

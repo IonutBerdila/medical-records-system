@@ -9,11 +9,11 @@ import { Tabs } from '../ui/Tabs';
 import { EmptyState } from '../ui/EmptyState';
 import { getPatientRecord } from '../app/records/recordsApi';
 import { getPatientEntries, addPatientEntry } from '../app/entries/entriesApi';
-import { getPatientPrescriptions, createPatientPrescription } from '../app/prescriptions/prescriptionsApi';
+import { getPatientPrescriptions, createPatientPrescription, getPrescriptionById, updatePrescriptionDraft, issuePrescriptionDraft, deletePrescriptionDraft } from '../app/prescriptions/prescriptionsApi';
 import type { MedicalRecordDto } from '../app/records/types';
 import type { MedicalEntryDto } from '../app/entries/types';
 import type { CreateMedicalEntryRequest } from '../app/entries/types';
-import type { CreatePrescriptionRequest, PrescriptionDto } from '../app/prescriptions/types';
+import type { CreatePrescriptionRequest, CreatePrescriptionItemRequest, PrescriptionDto } from '../app/prescriptions/types';
 import { getInitials } from '../app/utils/initials';
 
 const ENTRY_TYPES = ['Diagnosis', 'Visit', 'Note', 'LabResult'];
@@ -48,13 +48,27 @@ export const DoctorPatientDetailPage: React.FC = () => {
     title: '',
     description: ''
   });
-  const [prescriptionForm, setPrescriptionForm] = useState<CreatePrescriptionRequest>({
+  const emptyItem = (): CreatePrescriptionItemRequest => ({
+    id: undefined,
     medicationName: '',
+    form: '',
     dosage: '',
-    instructions: ''
+    frequency: '',
+    durationDays: undefined,
+    quantity: undefined,
+    instructions: '',
+    warnings: ''
+  });
+  const [prescriptionForm, setPrescriptionForm] = useState<CreatePrescriptionRequest>({
+    diagnosis: '',
+    generalNotes: '',
+    validUntilUtc: undefined,
+    status: 'Active',
+    items: [emptyItem()]
   });
   const [submittingEntry, setSubmittingEntry] = useState(false);
   const [submittingPrescription, setSubmittingPrescription] = useState(false);
+  const [editingPrescriptionId, setEditingPrescriptionId] = useState<string | null>(null);
 
   const load = () => {
     if (!patientUserId) return;
@@ -106,38 +120,196 @@ export const DoctorPatientDetailPage: React.FC = () => {
       setEntryForm({ type: 'Note', title: '', description: '' });
       load();
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string; title?: string } }; message?: string })?.response?.data
-          ?.message ||
-        (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
-        (err as { message?: string })?.message ||
-        'Eroare la adăugare';
+      type ApiErr = {
+        response?: { data?: { message?: string; title?: string; detail?: string } };
+        message?: string;
+      };
+      const e = err as ApiErr;
+      const msg = e.response?.data?.detail || e.response?.data?.message || e.response?.data?.title || e.message || 'Eroare la adăugare';
       toast.error(msg);
     } finally {
       setSubmittingEntry(false);
     }
   };
 
-  const handleCreatePrescription = async (e: React.FormEvent) => {
+  const handleCreatePrescription = async (e: React.FormEvent, asDraft: boolean) => {
     e.preventDefault();
-    if (!patientUserId || !prescriptionForm.medicationName.trim()) return;
+    if (!patientUserId) return;
+    const items = prescriptionForm.items.filter((i) => i.medicationName?.trim());
+    if (items.length === 0) {
+      toast.error('Adaugă cel puțin un medicament.');
+      return;
+    }
     setSubmittingPrescription(true);
     try {
-      await createPatientPrescription(patientUserId, prescriptionForm);
-      toast.success('Prescripție creată.');
-      setPrescriptionForm({ medicationName: '', dosage: '', instructions: '' });
+      if (editingPrescriptionId) {
+        await updatePrescriptionDraft(patientUserId, editingPrescriptionId, {
+          diagnosis: prescriptionForm.diagnosis?.trim() || undefined,
+          generalNotes: prescriptionForm.generalNotes?.trim() || undefined,
+          validUntilUtc: prescriptionForm.validUntilUtc,
+          items: items.map((i) => ({
+            id: i.id,
+            medicationName: i.medicationName.trim(),
+            form: i.form?.trim() || undefined,
+            dosage: i.dosage?.trim() || undefined,
+            frequency: i.frequency?.trim() || undefined,
+            durationDays: i.durationDays,
+            quantity: i.quantity,
+            instructions: i.instructions?.trim() || undefined,
+            warnings: i.warnings?.trim() || undefined
+          }))
+        });
+        toast.success('Draft actualizat cu succes.');
+        setEditingPrescriptionId(null);
+      } else {
+        await createPatientPrescription(patientUserId, {
+          diagnosis: prescriptionForm.diagnosis?.trim() || undefined,
+          generalNotes: prescriptionForm.generalNotes?.trim() || undefined,
+          validUntilUtc: prescriptionForm.validUntilUtc,
+          status: asDraft ? 'Draft' : 'Active',
+          items: items.map((i) => ({
+            medicationName: i.medicationName.trim(),
+            form: i.form?.trim() || undefined,
+            dosage: i.dosage?.trim() || undefined,
+            frequency: i.frequency?.trim() || undefined,
+            durationDays: i.durationDays,
+            quantity: i.quantity,
+            instructions: i.instructions?.trim() || undefined,
+            warnings: i.warnings?.trim() || undefined
+          }))
+        });
+        toast.success('Prescripție creată.');
+      }
+      setPrescriptionForm({ diagnosis: '', generalNotes: '', validUntilUtc: undefined, status: 'Active', items: [emptyItem()] });
       load();
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { message?: string; title?: string } }; message?: string })?.response?.data
-          ?.message ||
-        (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
-        (err as { message?: string })?.message ||
-        'Eroare la creare';
+      type ApiErr = {
+        response?: { data?: { message?: string; title?: string; detail?: string } };
+        message?: string;
+      };
+      const e = err as ApiErr;
+      const msg = e.response?.data?.detail || e.response?.data?.message || e.response?.data?.title || e.message || 'Eroare la creare';
       toast.error(msg);
     } finally {
       setSubmittingPrescription(false);
     }
+  };
+
+  const handleIssueDraft = async (prescriptionId: string) => {
+    if (!patientUserId) return;
+    const items = prescriptionForm.items.filter((i) => i.medicationName?.trim());
+    if (items.length === 0) {
+      toast.error('Adaugă cel puțin un medicament.');
+      return;
+    }
+    setSubmittingPrescription(true);
+    try {
+      await issuePrescriptionDraft(patientUserId, prescriptionId, {
+        diagnosis: prescriptionForm.diagnosis?.trim() || undefined,
+        generalNotes: prescriptionForm.generalNotes?.trim() || undefined,
+        validUntilUtc: prescriptionForm.validUntilUtc,
+        items: items.map((i) => ({
+          id: i.id,
+          medicationName: i.medicationName.trim(),
+          form: i.form?.trim() || undefined,
+          dosage: i.dosage?.trim() || undefined,
+          frequency: i.frequency?.trim() || undefined,
+          durationDays: i.durationDays,
+          quantity: i.quantity,
+          instructions: i.instructions?.trim() || undefined,
+          warnings: i.warnings?.trim() || undefined
+        }))
+      });
+      toast.success('Prescripție emisă.');
+      setEditingPrescriptionId(null);
+      setPrescriptionForm({ diagnosis: '', generalNotes: '', validUntilUtc: undefined, status: 'Active', items: [emptyItem()] });
+      load();
+    } catch (err: unknown) {
+      type ApiErr = {
+        response?: { data?: { message?: string; title?: string; detail?: string } };
+        message?: string;
+      };
+      const e = err as ApiErr;
+      const msg = e.response?.data?.detail || e.response?.data?.message || e.response?.data?.title || e.message || 'Eroare la emitere';
+      toast.error(msg);
+    } finally {
+      setSubmittingPrescription(false);
+    }
+  };
+
+  const handleEditDraft = async (prescriptionId: string) => {
+    if (!patientUserId) return;
+    try {
+      const draft = await getPrescriptionById(patientUserId, prescriptionId);
+      setPrescriptionForm({
+        diagnosis: draft.diagnosis || '',
+        generalNotes: draft.generalNotes || '',
+        validUntilUtc: draft.validUntilUtc,
+        status: draft.status,
+        items: draft.items.length > 0
+          ? draft.items.map((it) => ({
+              id: it.id,
+              medicationName: it.medicationName,
+              form: it.form || '',
+              dosage: it.dosage || '',
+              frequency: it.frequency || '',
+              durationDays: it.durationDays,
+              quantity: it.quantity,
+              instructions: it.instructions || '',
+              warnings: it.warnings || ''
+            }))
+          : [emptyItem()]
+      });
+      setEditingPrescriptionId(prescriptionId);
+    } catch (err: unknown) {
+      type ApiErr = {
+        response?: { data?: { message?: string; detail?: string } };
+        message?: string;
+      };
+      const e = err as ApiErr;
+      const msg = e.response?.data?.detail || e.response?.data?.message || e.message || 'Eroare la încărcare draft';
+      toast.error(msg);
+    }
+  };
+
+  const handleDeleteDraft = async (prescriptionId: string) => {
+    if (!patientUserId) return;
+    if (!confirm('Ești sigur că vrei să ștergi acest draft?')) return;
+    try {
+      await deletePrescriptionDraft(patientUserId, prescriptionId);
+      toast.success('Draft șters.');
+      if (editingPrescriptionId === prescriptionId) {
+        setEditingPrescriptionId(null);
+        setPrescriptionForm({ diagnosis: '', generalNotes: '', validUntilUtc: undefined, status: 'Active', items: [emptyItem()] });
+      }
+      load();
+    } catch (err: unknown) {
+      type ApiErr = {
+        response?: { data?: { message?: string; detail?: string } };
+        message?: string;
+      };
+      const e = err as ApiErr;
+      const msg = e.response?.data?.detail || e.response?.data?.message || e.message || 'Eroare la ștergere';
+      toast.error(msg);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingPrescriptionId(null);
+    setPrescriptionForm({ diagnosis: '', generalNotes: '', validUntilUtc: undefined, status: 'Active', items: [emptyItem()] });
+  };
+
+  const addPrescriptionItem = () => {
+    setPrescriptionForm((f) => ({ ...f, items: [...f.items, emptyItem()] }));
+  };
+  const removePrescriptionItem = (index: number) => {
+    setPrescriptionForm((f) => ({ ...f, items: f.items.filter((_, i) => i !== index) }));
+  };
+  const updatePrescriptionItem = (index: number, upd: Partial<CreatePrescriptionItemRequest>) => {
+    setPrescriptionForm((f) => ({
+      ...f,
+      items: f.items.map((item, i) => (i === index ? { ...item, ...upd } : item))
+    }));
   };
 
   const tabItems = [
@@ -336,6 +508,11 @@ export const DoctorPatientDetailPage: React.FC = () => {
                         {new Date(e.createdAtUtc).toLocaleString('ro-RO')}
                       </span>
                     </div>
+                    {(e.createdByDoctorFullName || e.createdByInstitutionName) && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {[e.createdByDoctorFullName && `Dr. ${e.createdByDoctorFullName}`, e.createdByInstitutionName].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
                     {e.description && (
                       <p className="mt-2 text-sm text-slate-600">{e.description}</p>
                     )}
@@ -351,51 +528,213 @@ export const DoctorPatientDetailPage: React.FC = () => {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <h2 className="text-xl font-semibold text-slate-900">Creează prescripție</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-slate-900">
+                  {editingPrescriptionId ? 'Editează prescripție' : 'Creează prescripție'}
+                </h2>
+                {editingPrescriptionId && (
+                  <Badge variant="info">Editare draft</Badge>
+                )}
+              </div>
             </CardHeader>
-            <CardContent>
-              <form className="grid gap-4 sm:grid-cols-2" onSubmit={handleCreatePrescription}>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <Input
-                    label="Medicament"
-                    value={prescriptionForm.medicationName}
-                    onChange={(e) =>
-                      setPrescriptionForm({ ...prescriptionForm, medicationName: e.target.value })
-                    }
-                    required
+                    label="Diagnostic (opțional)"
+                    value={prescriptionForm.diagnosis ?? ''}
+                    onChange={(e) => setPrescriptionForm({ ...prescriptionForm, diagnosis: e.target.value })}
                   />
                 </div>
                 <div>
                   <Input
-                    label="Doza (opțional)"
-                    value={prescriptionForm.dosage ?? ''}
-                    onChange={(e) => setPrescriptionForm({ ...prescriptionForm, dosage: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Input
-                    label="Instrucțiuni (opțional)"
-                    value={prescriptionForm.instructions ?? ''}
+                    label="Valabil până la"
+                    type="datetime-local"
+                    value={prescriptionForm.validUntilUtc ? new Date(prescriptionForm.validUntilUtc).toISOString().slice(0, 16) : ''}
                     onChange={(e) =>
-                      setPrescriptionForm({ ...prescriptionForm, instructions: e.target.value })
+                      setPrescriptionForm({
+                        ...prescriptionForm,
+                        validUntilUtc: e.target.value ? new Date(e.target.value).toISOString() : undefined
+                      })
                     }
                   />
                 </div>
-                <div className="flex gap-2 sm:col-span-2">
-                  <Button type="submit" loading={submittingPrescription}>
-                    Salvează prescripție
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() =>
-                      setPrescriptionForm({ medicationName: '', dosage: '', instructions: '' })
-                    }
-                  >
-                    Anulează
+                {!editingPrescriptionId && (
+                  <div>
+                    <label className="mb-1 block text-sm font-medium text-slate-700">Status</label>
+                    <select
+                      className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none focus:border-primary"
+                      value={prescriptionForm.status}
+                      onChange={(e) => setPrescriptionForm({ ...prescriptionForm, status: e.target.value })}
+                    >
+                      <option value="Draft">Draft</option>
+                      <option value="Active">Activ</option>
+                    </select>
+                  </div>
+                )}
+                <div className="sm:col-span-2">
+                  <Input
+                    label="Note generale (opțional)"
+                    value={prescriptionForm.generalNotes ?? ''}
+                    onChange={(e) => setPrescriptionForm({ ...prescriptionForm, generalNotes: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="text-sm font-medium text-slate-700">Medicamente</span>
+                  <Button type="button" variant="secondary" className="text-sm" onClick={addPrescriptionItem}>
+                    + Adaugă medicament
                   </Button>
                 </div>
-              </form>
+                <div className="space-y-3">
+                  {prescriptionForm.items.map((item, index) => (
+                    <Card key={index} className="p-4">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <Input
+                            label="Medicament"
+                            value={item.medicationName}
+                            onChange={(e) => updatePrescriptionItem(index, { medicationName: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <Input
+                          label="Formă"
+                          value={item.form ?? ''}
+                          onChange={(e) => updatePrescriptionItem(index, { form: e.target.value })}
+                        />
+                        <Input
+                          label="Dozaj"
+                          value={item.dosage ?? ''}
+                          onChange={(e) => updatePrescriptionItem(index, { dosage: e.target.value })}
+                        />
+                        <Input
+                          label="Frecvență"
+                          value={item.frequency ?? ''}
+                          onChange={(e) => updatePrescriptionItem(index, { frequency: e.target.value })}
+                        />
+                        <Input
+                          label="Durată (zile)"
+                          type="number"
+                          min={1}
+                          value={item.durationDays ?? ''}
+                          onChange={(e) =>
+                            updatePrescriptionItem(index, {
+                              durationDays: e.target.value ? parseInt(e.target.value, 10) : undefined
+                            })
+                          }
+                        />
+                        <Input
+                          label="Cantitate totală"
+                          type="number"
+                          min={1}
+                          value={item.quantity ?? ''}
+                          onChange={(e) =>
+                            updatePrescriptionItem(index, {
+                              quantity: e.target.value ? parseInt(e.target.value, 10) : undefined
+                            })
+                          }
+                        />
+                        <div className="sm:col-span-2">
+                          <Input
+                            label="Instrucțiuni"
+                            value={item.instructions ?? ''}
+                            onChange={(e) => updatePrescriptionItem(index, { instructions: e.target.value })}
+                          />
+                        </div>
+                        <div className="sm:col-span-2">
+                          <Input
+                            label="Atenționări"
+                            value={item.warnings ?? ''}
+                            onChange={(e) => updatePrescriptionItem(index, { warnings: e.target.value })}
+                          />
+                        </div>
+                        <div className="sm:col-span-2 flex justify-end">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => removePrescriptionItem(index)}
+                            disabled={prescriptionForm.items.length <= 1}
+                          >
+                            Șterge
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-200 pt-4">
+                <h3 className="text-sm font-semibold text-slate-800 mb-2">Rezumat prescripție</h3>
+                <p className="text-sm text-slate-600">
+                  {prescriptionForm.items.filter((i) => i.medicationName?.trim()).length} medicament(e)
+                  {prescriptionForm.diagnosis?.trim() && ` · Diagnostic: ${prescriptionForm.diagnosis.trim()}`}
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {editingPrescriptionId ? (
+                  <>
+                    <Button
+                      type="button"
+                      loading={submittingPrescription}
+                      onClick={(e) => handleCreatePrescription(e, false)}
+                    >
+                      Actualizează draft
+                    </Button>
+                    <Button
+                      type="button"
+                      loading={submittingPrescription}
+                      onClick={() => editingPrescriptionId && handleIssueDraft(editingPrescriptionId)}
+                    >
+                      Emite prescripția
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={cancelEdit}
+                    >
+                      Anulează editarea
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      type="button"
+                      loading={submittingPrescription}
+                      onClick={(e) => handleCreatePrescription(e, true)}
+                    >
+                      Salvează ca draft
+                    </Button>
+                    <Button
+                      type="button"
+                      loading={submittingPrescription}
+                      onClick={(e) => handleCreatePrescription(e, false)}
+                    >
+                      Emite prescripția
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() =>
+                        setPrescriptionForm({
+                          diagnosis: '',
+                          generalNotes: '',
+                          validUntilUtc: undefined,
+                          status: 'Active',
+                          items: [emptyItem()]
+                        })
+                      }
+                    >
+                      Anulează
+                    </Button>
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
 
@@ -410,17 +749,50 @@ export const DoctorPatientDetailPage: React.FC = () => {
               <ul className="space-y-2">
                 {prescriptions.map((p) => (
                   <Card key={p.id} className="p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium text-slate-900">{p.medicationName}</span>
-                      <span className="text-xs text-slate-500">
-                        {new Date(p.createdAtUtc).toLocaleString('ro-RO')}
-                      </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-slate-900">
+                          {new Date(p.createdAtUtc).toLocaleString('ro-RO')} · {p.status}
+                        </span>
+                        {p.status === 'Draft' && <Badge variant="info">Draft</Badge>}
+                      </div>
+                      {p.status === 'Draft' && (
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            className="text-sm"
+                            onClick={() => handleEditDraft(p.id)}
+                            disabled={editingPrescriptionId === p.id}
+                          >
+                            Editează draft
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="text-sm text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteDraft(p.id)}
+                          >
+                            Șterge draft
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                    {(p.dosage || p.instructions) && (
-                      <p className="mt-2 text-sm text-slate-600">
-                        {[p.dosage, p.instructions].filter(Boolean).join(' · ')}
+                    {(p.doctorFullName || p.doctorInstitutionName) && (
+                      <p className="mt-1 text-xs text-slate-500">
+                        {[p.doctorFullName && `Dr. ${p.doctorFullName}`, p.doctorInstitutionName].filter(Boolean).join(' · ')}
                       </p>
                     )}
+                    {p.diagnosis && <p className="text-sm text-slate-600">Diagnostic: {p.diagnosis}</p>}
+                    <ul className="mt-2 space-y-1">
+                      {(p.items ?? []).map((it) => (
+                        <li key={it.id} className="text-sm text-slate-700">
+                          {it.medicationName}
+                          {it.dosage && ` · ${it.dosage}`}
+                          <span className="text-xs text-slate-500"> ({it.status})</span>
+                        </li>
+                      ))}
+                    </ul>
                   </Card>
                 ))}
               </ul>

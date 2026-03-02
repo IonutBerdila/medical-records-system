@@ -5,6 +5,8 @@ export interface MedicalEntryDto {
   title: string;
   description?: string;
   createdByUserId: string;
+  createdByDoctorFullName?: string;
+  createdByInstitutionName?: string;
   createdAtUtc: string;
 }
 

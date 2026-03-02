@@ -86,28 +86,13 @@ public class ShareTokenService : IShareTokenService
         if (shareToken == null)
             throw new ShareTokenInvalidException("Token invalid, expirat sau deja folosit.");
 
-        // One-time use: marchez consumat
         shareToken.ConsumedAtUtc = now;
 
-        // Scope prescriptions:read — returnăm doar prescripțiile
         if (!shareToken.Scope.Contains("prescriptions:read", StringComparison.OrdinalIgnoreCase))
             return Array.Empty<PharmacyPrescriptionDto>();
 
-        IQueryable<Domain.Entities.Prescription> query = _db.Prescriptions
-            .Where(p => p.PatientUserId == shareToken.PatientUserId);
-
-        if (shareToken.PrescriptionId.HasValue)
-            query = query.Where(p => p.Id == shareToken.PrescriptionId.Value);
-
-        var prescriptions = await query
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync();
-
-        var doctorIds = prescriptions.Select(p => p.DoctorUserId).Distinct().ToList();
-        var doctorProfiles = await _db.DoctorProfiles
-            .AsNoTracking()
-            .Where(d => doctorIds.Contains(d.UserId))
-            .ToDictionaryAsync(d => d.UserId, d => d.FullName);
+        var prescriptions = await GetPrescriptionsWithPendingItemsAsync(shareToken.PatientUserId, shareToken.PrescriptionId);
+        var result = await MapToPharmacyDtosAsync(prescriptions);
 
         await _audit.LogAsync(new AuditEventCreate
         {
@@ -121,18 +106,7 @@ public class ShareTokenService : IShareTokenService
         });
 
         await _db.SaveChangesAsync();
-
-        return prescriptions.Select(p => new PharmacyPrescriptionDto
-        {
-            Id = p.Id,
-            MedicationName = p.MedicationName,
-            Dosage = p.Dosage,
-            Instructions = p.Instructions,
-            CreatedAtUtc = p.CreatedAtUtc,
-            DoctorName = doctorProfiles.GetValueOrDefault(p.DoctorUserId),
-            Status = p.Status,
-            DispensedAtUtc = p.DispensedAtUtc
-        }).ToList();
+        return result;
     }
 
     public async Task<PharmacyVerifyResponse> VerifyShareTokenV2Async(Guid pharmacyUserId, string token)
@@ -153,21 +127,8 @@ public class ShareTokenService : IShareTokenService
 
         shareToken.ConsumedAtUtc = now;
 
-        IQueryable<Domain.Entities.Prescription> query = _db.Prescriptions
-            .Where(p => p.PatientUserId == shareToken.PatientUserId);
-
-        if (shareToken.PrescriptionId.HasValue)
-            query = query.Where(p => p.Id == shareToken.PrescriptionId.Value);
-
-        var prescriptions = await query
-            .OrderByDescending(p => p.CreatedAtUtc)
-            .ToListAsync();
-
-        var doctorIds = prescriptions.Select(p => p.DoctorUserId).Distinct().ToList();
-        var doctorProfiles = await _db.DoctorProfiles
-            .AsNoTracking()
-            .Where(d => doctorIds.Contains(d.UserId))
-            .ToDictionaryAsync(d => d.UserId, d => d.FullName);
+        var prescriptions = await GetPrescriptionsWithPendingItemsAsync(shareToken.PatientUserId, shareToken.PrescriptionId);
+        var prescriptionDtos = await MapToPharmacyDtosAsync(prescriptions);
 
         var session = new PharmacyVerificationSession
         {
@@ -195,23 +156,69 @@ public class ShareTokenService : IShareTokenService
 
         await _db.SaveChangesAsync();
 
-        var items = prescriptions.Select(p => new PharmacyPrescriptionDto
-        {
-            Id = p.Id,
-            MedicationName = p.MedicationName,
-            Dosage = p.Dosage,
-            Instructions = p.Instructions,
-            CreatedAtUtc = p.CreatedAtUtc,
-            DoctorName = doctorProfiles.GetValueOrDefault(p.DoctorUserId),
-            Status = p.Status,
-            DispensedAtUtc = p.DispensedAtUtc
-        }).ToList();
-
         return new PharmacyVerifyResponse
         {
             VerificationId = session.Id,
-            Prescriptions = items
+            Prescriptions = prescriptionDtos
         };
+    }
+
+    /// <summary>Returns only Active prescriptions that have at least one Pending item. Includes all items (pending + dispensed).</summary>
+    private async Task<List<Domain.Entities.Prescription>> GetPrescriptionsWithPendingItemsAsync(Guid patientUserId, Guid? limitToPrescriptionId)
+    {
+        var query = _db.Prescriptions
+            .AsNoTracking()
+            .Include(p => p.Items)
+            .Where(p => p.PatientUserId == patientUserId && p.Status == "Active");
+
+        if (limitToPrescriptionId.HasValue)
+            query = query.Where(p => p.Id == limitToPrescriptionId.Value);
+
+        var list = await query.OrderByDescending(p => p.CreatedAtUtc).ToListAsync();
+        return list.Where(p => p.Items.Any(i => i.Status == "Pending")).ToList();
+    }
+
+    private async Task<List<PharmacyPrescriptionDto>> MapToPharmacyDtosAsync(List<Domain.Entities.Prescription> prescriptions)
+    {
+        if (prescriptions.Count == 0) return new List<PharmacyPrescriptionDto>();
+
+        var doctorIds = prescriptions.Select(p => p.DoctorUserId).Distinct().ToList();
+        var doctorProfiles = await _db.DoctorProfiles
+            .AsNoTracking()
+            .Where(d => doctorIds.Contains(d.UserId))
+            .ToDictionaryAsync(d => d.UserId, d => d.FullName);
+
+        var pharmacyUserIds = prescriptions.SelectMany(p => p.Items).Where(i => i.DispensedByPharmacyUserId.HasValue).Select(i => i.DispensedByPharmacyUserId!.Value).Distinct().ToList();
+        var pharmacyNames = pharmacyUserIds.Count > 0
+            ? await _db.PharmacyProfiles.AsNoTracking().Where(ph => pharmacyUserIds.Contains(ph.UserId)).ToDictionaryAsync(ph => ph.UserId, ph => ph.PharmacyName)
+            : new Dictionary<Guid, string>();
+
+        return prescriptions.Select(p => new PharmacyPrescriptionDto
+        {
+            Id = p.Id,
+            CreatedAtUtc = p.CreatedAtUtc,
+            DoctorName = doctorProfiles.GetValueOrDefault(p.DoctorUserId),
+            DoctorInstitutionName = null,
+            Diagnosis = p.Diagnosis,
+            GeneralNotes = p.GeneralNotes,
+            ValidUntilUtc = p.ValidUntilUtc,
+            Status = p.Status,
+            Items = p.Items.Select(i => new PharmacyPrescriptionItemDto
+            {
+                Id = i.Id,
+                MedicationName = i.MedicationName,
+                Form = i.Form,
+                Dosage = i.Dosage,
+                Frequency = i.Frequency,
+                DurationDays = i.DurationDays,
+                Quantity = i.Quantity,
+                Instructions = i.Instructions,
+                Warnings = i.Warnings,
+                Status = i.Status,
+                DispensedAtUtc = i.DispensedAtUtc,
+                DispensedByPharmacyName = i.DispensedByPharmacyUserId.HasValue && pharmacyNames.TryGetValue(i.DispensedByPharmacyUserId.Value, out var name) ? name : null
+            }).ToList()
+        }).ToList();
     }
 
     /// <summary>

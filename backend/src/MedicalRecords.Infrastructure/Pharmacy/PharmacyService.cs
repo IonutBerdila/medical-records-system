@@ -12,9 +12,9 @@ public class PharmacySessionInvalidException : Exception
     public PharmacySessionInvalidException(string message = "Sesiune de verificare invalidă sau expirată.") : base(message) { }
 }
 
-public class PrescriptionAlreadyDispensedException : Exception
+public class PrescriptionItemAlreadyDispensedException : Exception
 {
-    public PrescriptionAlreadyDispensedException(string message = "Prescripția este deja marcată ca eliberată.") : base(message) { }
+    public PrescriptionItemAlreadyDispensedException(string message = "Itemul este deja eliberat.") : base(message) { }
 }
 
 public class PharmacyService : IPharmacyService
@@ -28,8 +28,11 @@ public class PharmacyService : IPharmacyService
         _audit = audit;
     }
 
-    public async Task<PharmacyPrescriptionDto> DispensePrescriptionAsync(Guid pharmacyUserId, Guid verificationId, Guid prescriptionId)
+    public async Task<IReadOnlyList<PharmacyPrescriptionDto>> DispensePrescriptionItemsAsync(Guid pharmacyUserId, Guid verificationId, IReadOnlyList<Guid> prescriptionItemIds)
     {
+        if (prescriptionItemIds == null || prescriptionItemIds.Count == 0)
+            return Array.Empty<PharmacyPrescriptionDto>();
+
         var now = DateTime.UtcNow;
 
         var session = await _db.PharmacyVerificationSessions
@@ -42,51 +45,97 @@ public class PharmacyService : IPharmacyService
         if (session == null)
             throw new PharmacySessionInvalidException();
 
-        var prescription = await _db.Prescriptions.FirstOrDefaultAsync(p => p.Id == prescriptionId);
-        if (prescription == null)
-            throw new KeyNotFoundException("Prescripția nu a fost găsită.");
+        var distinctIds = prescriptionItemIds.Distinct().ToList();
+        var items = await _db.PrescriptionItems
+            .Include(i => i.Prescription)
+            .Where(i => distinctIds.Contains(i.Id))
+            .ToListAsync();
 
-        if (prescription.PatientUserId != session.PatientUserId)
-            throw new PharmacySessionInvalidException("Prescripția nu aparține pacientului din sesiune.");
-
-        if (session.AllowedPrescriptionId.HasValue && session.AllowedPrescriptionId.Value != prescriptionId)
-            throw new PharmacySessionInvalidException("Sesiunea permite doar o altă prescripție.");
-
-        if (string.Equals(prescription.Status, "Dispensed", StringComparison.OrdinalIgnoreCase) ||
-            prescription.DispensedAtUtc != null)
+        foreach (var item in items)
         {
-            throw new PrescriptionAlreadyDispensedException();
+            if (item.Prescription.PatientUserId != session.PatientUserId)
+                throw new PharmacySessionInvalidException("Prescripția nu aparține pacientului din sesiune.");
+            if (session.AllowedPrescriptionId.HasValue && session.AllowedPrescriptionId.Value != item.PrescriptionId)
+                throw new PharmacySessionInvalidException("Sesiunea nu permite această prescripție.");
+            if (item.Status != "Pending")
+                throw new PrescriptionItemAlreadyDispensedException($"Itemul {item.MedicationName} este deja eliberat.");
         }
 
-        prescription.Status = "Dispensed";
-        prescription.DispensedAtUtc = now;
-        prescription.DispensedByPharmacyUserId = pharmacyUserId;
+        foreach (var item in items)
+        {
+            item.Status = "Dispensed";
+            item.DispensedAtUtc = now;
+            item.DispensedByPharmacyUserId = pharmacyUserId;
+        }
+
+        var prescriptionIds = items.Select(i => i.PrescriptionId).Distinct().ToList();
+        var prescriptions = await _db.Prescriptions.Include(p => p.Items).Where(p => prescriptionIds.Contains(p.Id)).ToListAsync();
+
+        foreach (var p in prescriptions)
+        {
+            if (p.Items.All(i => i.Status == "Dispensed" || i.Status == "Cancelled"))
+                p.Status = "Completed";
+        }
 
         await _db.SaveChangesAsync();
 
-        await _audit.LogAsync(new AuditEventCreate
+        foreach (var item in items)
         {
-            TimestampUtc = now,
-            Action = "PRESCRIPTION_DISPENSED",
-            ActorUserId = pharmacyUserId,
-            ActorRole = "Pharmacy",
-            PatientUserId = prescription.PatientUserId,
-            EntityType = "Prescription",
-            EntityId = prescription.Id
-        });
+            await _audit.LogAsync(new AuditEventCreate
+            {
+                TimestampUtc = now,
+                Action = "PRESCRIPTION_ITEM_DISPENSED",
+                ActorUserId = pharmacyUserId,
+                ActorRole = "Pharmacy",
+                PatientUserId = items.First().Prescription.PatientUserId,
+                EntityType = "PrescriptionItem",
+                EntityId = item.Id
+            });
+        }
 
-        return new PharmacyPrescriptionDto
+        var allPrescriptionsForPatient = await _db.Prescriptions
+            .AsNoTracking()
+            .Include(p => p.Items)
+            .Where(p => p.PatientUserId == session.PatientUserId && p.Status == "Active")
+            .OrderByDescending(p => p.CreatedAtUtc)
+            .ToListAsync();
+
+        var withPending = allPrescriptionsForPatient.Where(p => p.Items.Any(i => i.Status == "Pending")).ToList();
+        if (withPending.Count == 0)
+            return Array.Empty<PharmacyPrescriptionDto>();
+
+        var doctorIds = withPending.Select(p => p.DoctorUserId).Distinct().ToList();
+        var doctorProfiles = await _db.DoctorProfiles.AsNoTracking().Where(d => doctorIds.Contains(d.UserId)).ToDictionaryAsync(d => d.UserId, d => d.FullName);
+        var pharmacyUserIds = withPending.SelectMany(p => p.Items).Where(i => i.DispensedByPharmacyUserId.HasValue).Select(i => i.DispensedByPharmacyUserId!.Value).Distinct().ToList();
+        var pharmacyNames = pharmacyUserIds.Count > 0
+            ? await _db.PharmacyProfiles.AsNoTracking().Where(ph => pharmacyUserIds.Contains(ph.UserId)).ToDictionaryAsync(ph => ph.UserId, ph => ph.PharmacyName)
+            : new Dictionary<Guid, string>();
+
+        return withPending.Select(p => new PharmacyPrescriptionDto
         {
-            Id = prescription.Id,
-            MedicationName = prescription.MedicationName,
-            Dosage = prescription.Dosage,
-            Instructions = prescription.Instructions,
-            CreatedAtUtc = prescription.CreatedAtUtc,
-            // DoctorName nu este necesar aici; poate fi completat separat dacă este nevoie
-            DoctorName = null,
-            Status = prescription.Status,
-            DispensedAtUtc = prescription.DispensedAtUtc
-        };
+            Id = p.Id,
+            CreatedAtUtc = p.CreatedAtUtc,
+            DoctorName = doctorProfiles.GetValueOrDefault(p.DoctorUserId),
+            DoctorInstitutionName = null,
+            Diagnosis = p.Diagnosis,
+            GeneralNotes = p.GeneralNotes,
+            ValidUntilUtc = p.ValidUntilUtc,
+            Status = p.Status,
+            Items = p.Items.Select(i => new PharmacyPrescriptionItemDto
+            {
+                Id = i.Id,
+                MedicationName = i.MedicationName,
+                Form = i.Form,
+                Dosage = i.Dosage,
+                Frequency = i.Frequency,
+                DurationDays = i.DurationDays,
+                Quantity = i.Quantity,
+                Instructions = i.Instructions,
+                Warnings = i.Warnings,
+                Status = i.Status,
+                DispensedAtUtc = i.DispensedAtUtc,
+                DispensedByPharmacyName = i.DispensedByPharmacyUserId.HasValue && pharmacyNames.TryGetValue(i.DispensedByPharmacyUserId.Value, out var name) ? name : null
+            }).ToList()
+        }).ToList();
     }
 }
-

@@ -8,5 +8,7 @@ public class MedicalEntryDto
     public string Title { get; set; } = default!;
     public string? Description { get; set; }
     public Guid CreatedByUserId { get; set; }
+    public string? CreatedByDoctorFullName { get; set; }
+    public string? CreatedByInstitutionName { get; set; }
     public DateTime CreatedAtUtc { get; set; }
 }

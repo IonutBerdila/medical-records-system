@@ -31,7 +31,14 @@ public class MedicalEntryService : IMedicalEntryService
             .Where(e => e.RecordId == record.Id)
             .OrderByDescending(e => e.CreatedAtUtc)
             .ToListAsync();
-        return entries.Select(ToDto).ToList();
+
+        var doctorIds = entries.Select(e => e.CreatedByUserId).Distinct().ToList();
+        var doctorProfiles = await _db.DoctorProfiles
+            .AsNoTracking()
+            .Where(p => doctorIds.Contains(p.UserId))
+            .ToDictionaryAsync(p => p.UserId, p => p.FullName);
+
+        return entries.Select(e => ToDto(e, doctorProfiles.GetValueOrDefault(e.CreatedByUserId))).ToList();
     }
 
     public async Task<IReadOnlyList<MedicalEntryDto>> GetEntriesForPatientAsync(Guid doctorUserId, Guid patientUserId)
@@ -77,10 +84,16 @@ public class MedicalEntryService : IMedicalEntryService
         };
         _db.MedicalEntries.Add(entry);
         await _db.SaveChangesAsync();
-        return ToDto(entry);
+
+        var doctorName = await _db.DoctorProfiles
+            .AsNoTracking()
+            .Where(p => p.UserId == doctorUserId)
+            .Select(p => p.FullName)
+            .FirstOrDefaultAsync();
+        return ToDto(entry, doctorName);
     }
 
-    private static MedicalEntryDto ToDto(MedicalEntry e)
+    private static MedicalEntryDto ToDto(MedicalEntry e, string? doctorFullName = null)
     {
         return new MedicalEntryDto
         {
@@ -90,6 +103,8 @@ public class MedicalEntryService : IMedicalEntryService
             Title = e.Title,
             Description = e.Description,
             CreatedByUserId = e.CreatedByUserId,
+            CreatedByDoctorFullName = doctorFullName,
+            CreatedByInstitutionName = null,
             CreatedAtUtc = e.CreatedAtUtc
         };
     }
