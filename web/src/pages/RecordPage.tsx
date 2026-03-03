@@ -247,13 +247,11 @@ export const RecordPage: React.FC = () => {
           <section>
             <h2 className="mb-4 text-base font-semibold text-slate-800">Medicație curentă</h2>
             <Textarea
-              label="Medicație curentă"
-              helper="Include: denumire, doză, frecvență (ex: Metformin 500mg, 2x/zi)"
               value={form.currentMedications ?? ''}
               onChange={(e) => setForm({ ...form, currentMedications: e.target.value })}
               rows={4}
               maxLength={1000}
-              placeholder="Ex: Metformin 500mg, 2x/zi"
+              placeholder=""
             />
           </section>
 
@@ -262,12 +260,11 @@ export const RecordPage: React.FC = () => {
             <h2 className="mb-4 text-base font-semibold text-slate-800">Istoric medical relevant</h2>
             <Textarea
               label="Intervenții / spitalizări importante"
-              helper="Ex: apendicectomie 2022, internare 2024"
               value={form.majorSurgeriesHospitalizations ?? ''}
               onChange={(e) => setForm({ ...form, majorSurgeriesHospitalizations: e.target.value })}
               rows={4}
               maxLength={1000}
-              placeholder="Ex: apendicectomie 2022, internare 2024"
+              placeholder=""
             />
           </section>
 

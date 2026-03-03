@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Input } from '../ui/Input';
@@ -41,12 +41,29 @@ export const Signup: React.FC = () => {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
 
+  const dateInputRef = useRef<HTMLInputElement | null>(null);
+
   const todayIso = new Date().toISOString().slice(0, 10);
 
+  // Valoarea efectivă din input (vizibilă doar ca poziție de cursor):
+  // "3" -> "3", "300" -> "30.0", "3006" -> "30.06", "30061990" -> "30.06.1990"
   const formatDateInput = (digits: string): string => {
     if (digits.length <= 2) return digits;
     if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
     return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4, 8)}`;
+  };
+
+  // Masca vizuală "ZZ.LL.AAAA" unde literele dispar progresiv când tastezi:
+  const formatDateMask = (digits: string): string => {
+    const maskChars = ['Z', 'Z', '.', 'L', 'L', '.', 'A', 'A', 'A', 'A'];
+    const positions = [0, 1, 3, 4, 6, 7, 8, 9]; // indecșii pentru cele 8 cifre
+
+    const result = [...maskChars];
+    for (let i = 0; i < digits.length && i < positions.length; i++) {
+      result[positions[i]] = digits[i];
+    }
+
+    return result.join('');
   };
 
   const parseDateDigitsToIso = (digits: string): string | null => {
@@ -80,7 +97,7 @@ export const Signup: React.FC = () => {
 
   const handleDateOfBirthChange = (rawValue: string) => {
     const digits = rawValue.replace(/\D/g, '').slice(0, 8);
-    setDateOfBirthInput(formatDateInput(digits));
+    setDateOfBirthInput(digits);
 
     const isoDate = parseDateDigitsToIso(digits);
     setDateOfBirth(isoDate ?? '');
@@ -277,19 +294,71 @@ export const Signup: React.FC = () => {
                 />
               </div>
 
-              <Input
-                label="Data nașterii"
-                type="text"
-                inputMode="numeric"
-                autoComplete="bday"
-                placeholder="ZZ.LL.AAAA"
-                maxLength={10}
-                value={dateOfBirthInput}
-                onChange={(e) => handleDateOfBirthChange(e.target.value)}
-                error={errors.dateOfBirth}
-                showRequiredMark={false}
-                required
-              />
+              {/* Data nașterii cu mască vizuală ZZ.LL.AAAA */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-slate-700">
+                  Data nașterii
+                </label>
+                <div className="relative">
+                  <input
+                    ref={dateInputRef}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="bday"
+                    maxLength={10}
+                    value={formatDateInput(dateOfBirthInput)}
+                    onChange={(e) => handleDateOfBirthChange(e.target.value)}
+                    onFocus={() => {
+                      const el = dateInputRef.current;
+                      if (!el) return;
+                      const len = el.value.length;
+                      // folosim rAF ca să mutăm cursorul după ce browserul procesează focusul
+                      requestAnimationFrame(() => {
+                        try {
+                          el.setSelectionRange(len, len);
+                        } catch {
+                          // ignore
+                        }
+                      });
+                    }}
+                    aria-invalid={!!errors.dateOfBirth}
+                    className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-transparent caret-slate-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 ${
+                      errors.dateOfBirth
+                        ? 'border-red-300 focus:border-red-500'
+                        : 'border-slate-200 focus:border-primary'
+                    }`}
+                    required
+                  />
+                  {/* Overlay cu masca ZZ.LL.AAAA: cifrele și punctele în culoare normală, literele-mască în gri */}
+                  <div className="pointer-events-none absolute inset-0 flex items-center px-4 text-sm">
+                    {formatDateMask(dateOfBirthInput).split('').map((ch, idx) => {
+                      const digitsLen = dateOfBirthInput.length;
+                      const isDigit = /\d/.test(ch);
+
+                      // Punctele devin „active” (închise la culoare) doar după ce utilizatorul a trecut de ele:
+                      // - primul punct (index 2) după a 3-a cifră
+                      // - al doilea punct (index 5) după a 5-a cifră
+                      let isActiveDot = false;
+                      if (ch === '.') {
+                        if (idx === 2 && digitsLen >= 3) isActiveDot = true;
+                        if (idx === 5 && digitsLen >= 5) isActiveDot = true;
+                      }
+
+                      const cls = isDigit || isActiveDot ? 'text-slate-900' : 'text-slate-300';
+                      return (
+                        <span key={idx} className={cls}>
+                          {ch}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+                {errors.dateOfBirth && (
+                  <p className="text-xs text-red-600" role="alert">
+                    {errors.dateOfBirth}
+                  </p>
+                )}
+              </div>
 
               <Input
                 label="Adresă de email"

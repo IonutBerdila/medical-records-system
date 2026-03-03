@@ -117,18 +117,19 @@ builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 // ProblemDetails for consistent error responses (used by global exception handling)
 builder.Services.AddProblemDetails();
 
-// Add Controllers + FluentValidation (explicit camelCase for JSON)
+// Add Controllers (explicit camelCase for JSON)
 builder.Services
     .AddControllers()
     .AddJsonOptions(opts =>
     {
         opts.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         opts.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-    })
-    .AddFluentValidation();
+    });
 
+// FluentValidation integration (new recommended API)
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
 
 // Add Swagger
 builder.Services.AddEndpointsApiExplorer();
