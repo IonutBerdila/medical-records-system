@@ -42,6 +42,23 @@ public class ConsentController : ControllerBase
         return Ok(result);
     }
 
+    /// <summary>Căutare doctori după nume sau email, pentru pacient (doar conturi de Doctor aprobate).</summary>
+    [HttpGet("search-doctors")]
+    [ProducesResponseType(typeof(IReadOnlyList<DoctorLookupDto>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> SearchDoctors([FromQuery] string query)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized();
+
+        if (string.IsNullOrWhiteSpace(query) || query.Trim().Length < 2)
+        {
+            return Ok(Array.Empty<DoctorLookupDto>());
+        }
+
+        var result = await _consentService.SearchDoctorsAsync(query);
+        return Ok(result);
+    }
+
     [HttpPost("grant")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Grant([FromBody] GrantAccessRequest request)

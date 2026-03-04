@@ -8,6 +8,7 @@ public interface IConsentService
     Task<bool> RevokeAccessByIdAsync(Guid patientUserId, Guid accessId);
     Task<IReadOnlyList<AccessDto>> ListMyGrantedAccessAsync(Guid patientUserId);
     Task<IReadOnlyList<DoctorPatientDto>> ListMyPatientsAsync(Guid doctorUserId);
+    Task<IReadOnlyList<DoctorLookupDto>> SearchDoctorsAsync(string query);
 }
 
 public class DoctorPatientDto

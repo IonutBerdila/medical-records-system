@@ -130,4 +130,37 @@ public class ConsentService : IConsentService
         }
         return result;
     }
+
+    public async Task<IReadOnlyList<DoctorLookupDto>> SearchDoctorsAsync(string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return Array.Empty<DoctorLookupDto>();
+        }
+
+        var normalized = query.Trim().ToLowerInvariant();
+
+        // Căutăm doar doctori aprobați, după nume complet sau email.
+        var doctors = await (from profile in _db.DoctorProfiles
+                             join user in _userManager.Users on profile.UserId equals user.Id
+                             where profile.ApprovalStatus == "Approved"
+                                   && (
+                                       (profile.FullName != null &&
+                                        profile.FullName.ToLower().Contains(normalized)) ||
+                                       (user.Email != null &&
+                                        user.Email.ToLower().Contains(normalized))
+                                   )
+                             orderby profile.FullName
+                             select new DoctorLookupDto
+                             {
+                                 UserId = user.Id,
+                                 FullName = profile.FullName,
+                                 Email = user.Email,
+                                 LicenseNumber = profile.LicenseNumber
+                             })
+                             .Take(10)
+                             .ToListAsync();
+
+        return doctors;
+    }
 }

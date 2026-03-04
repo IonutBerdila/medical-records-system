@@ -7,6 +7,13 @@ export interface AccessDto {
   isActive: boolean;
 }
 
+export interface DoctorLookupDto {
+  userId: string;
+  fullName?: string;
+  email?: string;
+  licenseNumber?: string;
+}
+
 export interface GrantAccessRequest {
   doctorUserId?: string;
   doctorEmail?: string;

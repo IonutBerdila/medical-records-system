@@ -1,8 +1,21 @@
 import { http } from '../http';
-import type { AccessDto, GrantAccessRequest, CreateShareTokenRequest, ShareTokenResponse } from './types';
+import type {
+  AccessDto,
+  GrantAccessRequest,
+  CreateShareTokenRequest,
+  ShareTokenResponse,
+  DoctorLookupDto
+} from './types';
 
 export async function getMyDoctors(): Promise<AccessDto[]> {
   const { data } = await http.get<AccessDto[]>('/api/consent/my-doctors');
+  return data;
+}
+
+export async function searchDoctors(query: string): Promise<DoctorLookupDto[]> {
+  const { data } = await http.get<DoctorLookupDto[]>('/api/consent/search-doctors', {
+    params: { query }
+  });
   return data;
 }
 
