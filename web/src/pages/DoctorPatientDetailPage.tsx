@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Card, CardHeader, CardContent } from "../ui/Card";
@@ -34,6 +34,40 @@ function formatTags(arr: string | string[] | undefined): string {
   const list = Array.isArray(arr) ? arr : [arr];
   return list.filter(Boolean).join(", ") || "—";
 }
+
+// Helpers pentru câmpul "Valabil până la" (UI identic cu "Expiră la" din ShareAccess)
+const WEEK_DAYS_RO = ["Lu", "Ma", "Mi", "Jo", "Vi", "Sa", "Du"];
+const monthFormatterRo = new Intl.DateTimeFormat("ro-RO", {
+  month: "long",
+  year: "numeric",
+});
+const formatDateRo = (date: Date): string => {
+  const dd = String(date.getDate()).padStart(2, "0");
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const yyyy = date.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+};
+const startOfDay = (date: Date): Date =>
+  new Date(date.getFullYear(), date.getMonth(), date.getDate());
+const isBeforeToday = (date: Date): boolean =>
+  startOfDay(date).getTime() < startOfDay(new Date()).getTime();
+const getMonthGridMondayFirst = (monthStart: Date): Date[] => {
+  const first = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+  const mondayIndex = (first.getDay() + 6) % 7;
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - mondayIndex);
+  return Array.from({ length: 42 }, (_, idx) => {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + idx);
+    return d;
+  });
+};
+const areSameDay = (a: Date, b: Date): boolean =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
+const buildEndOfDay = (day: Date): Date =>
+  new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 0, 0);
 
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 function hasRecordData(r: MedicalRecordDto | null): boolean {
@@ -79,6 +113,89 @@ export const DoctorPatientDetailPage: React.FC = () => {
       status: "Active",
       items: [emptyItem()],
     });
+  const [validUntilPickerOpen, setValidUntilPickerOpen] = useState(false);
+  const [validUntilSelectedDay, setValidUntilSelectedDay] = useState<Date | null>(
+    null,
+  );
+  const [validUntilValidationError, setValidUntilValidationError] = useState<
+    string | null
+  >(null);
+  const [validUntilMonthCursor, setValidUntilMonthCursor] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const validUntilPickerRef = useRef<HTMLDivElement | null>(null);
+  const monthDays = useMemo(
+    () => getMonthGridMondayFirst(validUntilMonthCursor),
+    [validUntilMonthCursor],
+  );
+
+  const validUntilPreview = useMemo(() => {
+    if (!validUntilSelectedDay) return null;
+    return buildEndOfDay(validUntilSelectedDay);
+  }, [validUntilSelectedDay]);
+
+  const isValidUntilPreviewValid =
+    !!validUntilPreview && validUntilPreview.getTime() >= Date.now();
+
+  const setValidUntilFromDay = (day: Date) => {
+    const next = buildEndOfDay(day);
+    setPrescriptionForm((f) => ({ ...f, validUntilUtc: next.toISOString() }));
+  };
+
+  const handleSelectValidUntilDay = (day: Date) => {
+    const nextDay = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    setValidUntilSelectedDay(nextDay);
+    setValidUntilValidationError(null);
+  };
+
+  const handleConfirmValidUntil = () => {
+    if (!validUntilPreview || validUntilPreview.getTime() < Date.now()) {
+      setValidUntilValidationError("Data si ora trebuie sa fie in viitor.");
+      return;
+    }
+    setValidUntilFromDay(validUntilSelectedDay!);
+    setValidUntilValidationError(null);
+    setValidUntilPickerOpen(false);
+  };
+
+  useEffect(() => {
+    if (!validUntilPickerOpen) return;
+    const source = prescriptionForm.validUntilUtc
+      ? new Date(prescriptionForm.validUntilUtc)
+      : new Date();
+    if (Number.isNaN(source.getTime())) return;
+    const selected = new Date(source.getFullYear(), source.getMonth(), source.getDate());
+    setValidUntilSelectedDay(selected);
+    setValidUntilMonthCursor(new Date(source.getFullYear(), source.getMonth(), 1));
+  }, [validUntilPickerOpen, prescriptionForm.validUntilUtc]);
+
+  useEffect(() => {
+    if (!validUntilPickerOpen) return;
+    const onDocumentClick = (ev: MouseEvent) => {
+      if (!validUntilPickerRef.current) return;
+      if (!validUntilPickerRef.current.contains(ev.target as Node)) {
+        setValidUntilPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocumentClick);
+    return () => document.removeEventListener("mousedown", onDocumentClick);
+  }, [validUntilPickerOpen]);
+
+  useEffect(() => {
+    if (!prescriptionForm.validUntilUtc) {
+      setValidUntilValidationError(null);
+      return;
+    }
+    const selected = new Date(prescriptionForm.validUntilUtc);
+    if (Number.isNaN(selected.getTime())) return;
+    if (selected.getTime() < Date.now()) {
+      setValidUntilValidationError("Data si ora trebuie sa fie in viitor.");
+    } else {
+      setValidUntilValidationError(null);
+    }
+  }, [prescriptionForm.validUntilUtc]);
+
   const [submittingEntry, setSubmittingEntry] = useState(false);
   const [submittingPrescription, setSubmittingPrescription] = useState(false);
   const [editingPrescriptionId, setEditingPrescriptionId] = useState<
@@ -720,25 +837,124 @@ export const DoctorPatientDetailPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <Input
-                    label="Valabil până la"
-                    type="datetime-local"
-                    value={
-                      prescriptionForm.validUntilUtc
-                        ? new Date(prescriptionForm.validUntilUtc)
-                            .toISOString()
-                            .slice(0, 16)
-                        : ""
-                    }
-                    onChange={(e) =>
-                      setPrescriptionForm({
-                        ...prescriptionForm,
-                        validUntilUtc: e.target.value
-                          ? new Date(e.target.value).toISOString()
-                          : undefined,
-                      })
-                    }
-                  />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-slate-700">
+                        Valabil până la
+                      </label>
+                    </div>
+
+                    <div className="relative" ref={validUntilPickerRef}>
+                      <button
+                        type="button"
+                        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onClick={() => setValidUntilPickerOpen((prev) => !prev)}
+                      >
+                        {prescriptionForm.validUntilUtc
+                          ? formatDateRo(new Date(prescriptionForm.validUntilUtc))
+                          : "Selecteaza data"}
+                      </button>
+
+                      {validUntilPickerOpen && (
+                        <div className="absolute left-0 z-30 mt-2 w-full min-w-[320px] rounded-xl border border-slate-200 bg-white p-3 shadow-lg sm:w-[360px]">
+                          <div className="mb-3 flex items-center justify-between">
+                            <button
+                              type="button"
+                              className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100"
+                              onClick={() =>
+                                setValidUntilMonthCursor(
+                                  (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                                )
+                              }
+                            >
+                              {"<"}
+                            </button>
+                            <p className="text-sm font-semibold capitalize text-slate-800">
+                              {monthFormatterRo.format(validUntilMonthCursor)}
+                            </p>
+                            <button
+                              type="button"
+                              className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100"
+                              onClick={() =>
+                                setValidUntilMonthCursor(
+                                  (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                                )
+                              }
+                            >
+                              {">"}
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500">
+                            {WEEK_DAYS_RO.map((label) => (
+                              <span key={label} className="py-1">
+                                {label}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
+                            {monthDays.map((day) => {
+                              const inMonth = day.getMonth() === validUntilMonthCursor.getMonth();
+                              const isToday = areSameDay(day, new Date());
+                              const isSelected =
+                                !!validUntilSelectedDay && areSameDay(day, validUntilSelectedDay);
+                              const disabled = isBeforeToday(day);
+                              return (
+                                <button
+                                  key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                                  type="button"
+                                  disabled={disabled}
+                                  className={[
+                                    "h-8 rounded-lg transition-colors",
+                                    disabled
+                                      ? "cursor-not-allowed text-slate-300"
+                                      : "hover:bg-slate-100",
+                                    isSelected ? "bg-teal-500 text-white hover:bg-teal-500" : "",
+                                    !inMonth ? "text-slate-400" : "text-slate-700",
+                                    isToday && !isSelected ? "ring-1 ring-teal-300" : "",
+                                  ].join(" ")}
+                                  onClick={() => handleSelectValidUntilDay(day)}
+                                >
+                                  {day.getDate()}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {validUntilValidationError && (
+                            <p className="mt-2 text-xs text-red-600">{validUntilValidationError}</p>
+                          )}
+                          {!validUntilValidationError &&
+                            validUntilPreview &&
+                            !isValidUntilPreviewValid && (
+                              <p className="mt-2 text-xs text-red-600">
+                                Data si ora trebuie sa fie in viitor.
+                              </p>
+                            )}
+
+                          <div className="mt-3 flex items-center justify-between">
+                            <button
+                              type="button"
+                              className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                              onClick={() =>
+                                setPrescriptionForm((f) => ({ ...f, validUntilUtc: undefined }))
+                              }
+                            >
+                              Sterge
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-md bg-teal-600 px-3 py-1.5 text-xs text-white hover:bg-teal-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+                              disabled={!isValidUntilPreviewValid}
+                              onClick={handleConfirmValidUntil}
+                            >
+                              Confirma
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
                 {!editingPrescriptionId && (
                   <div>

@@ -19,22 +19,22 @@ import {
 const ROUTE_TITLES: Record<string, string> = {
   '/me': 'Profil',
   '/dashboard': 'Dashboard',
-  '/record': 'Fisa medicala',
+  '/record': 'Fișa medicală',
   '/timeline': 'Istoric',
-  '/appointments': 'Programari',
-  '/prescriptions': 'Prescriptii',
-  '/share': 'Acces si partajare',
-  '/doctor/patients': 'Pacientii mei',
-  '/doctor/appointments': 'Programari',
+  '/appointments': 'Programări',
+  '/prescriptions': 'Prescripții',
+  '/share': 'Acces și partajare',
+  '/doctor/patients': 'Pacienții mei',
+  '/doctor/appointments': 'Programări',
   '/doctor/analytics': 'Analitica',
   '/admin': 'Dashboard Admin',
   '/admin/users': 'Gestionare utilizatori',
-  '/admin/approvals': 'Aprobari',
+  '/admin/approvals': 'Aprobări',
   '/admin/audit': 'Jurnale audit',
   '/admin/reports': 'Rapoarte',
   '/admin/config': 'Configurare sistem',
   '/pharmacy': 'Farmacie',
-  '/pharmacy/prescription': 'Prescriptie'
+  '/pharmacy/prescription': 'Prescripție'
 };
 
 const ROUTE_SUBTITLES: Record<string, string> = {
@@ -81,13 +81,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
   const navItems: NavItem[] = [
     { label: 'Dashboard', to: '/dashboard', roles: ['Patient', 'Doctor', 'Pharmacy', 'Admin'], icon: <IconDashboard /> },
-    { label: 'Fisa medicala', to: '/record', roles: ['Patient'], icon: <IconDocument /> },
+    { label: 'Fișa medicală', to: '/record', roles: ['Patient'], icon: <IconDocument /> },
     { label: 'Istoric', to: '/timeline', roles: ['Patient'], icon: <IconClock /> },
-    { label: 'Prescriptii', to: '/prescriptions', roles: ['Patient'], icon: <IconPrescription /> },
-    { label: 'Acces si partajare', to: '/share', roles: ['Patient'], icon: <IconShare /> },
-    { label: 'Programari', to: '/appointments', roles: ['Patient'], icon: <IconCalendar /> },
-    { label: 'Pacientii mei', to: '/doctor/patients', roles: ['Doctor'], icon: <IconUsers /> },
-    { label: 'Programari', to: '/doctor/appointments', roles: ['Doctor'], icon: <IconCalendar /> },
+    { label: 'Prescripții', to: '/prescriptions', roles: ['Patient'], icon: <IconPrescription /> },
+    { label: 'Acces și partajare', to: '/share', roles: ['Patient'], icon: <IconShare /> },
+    { label: 'Programări', to: '/appointments', roles: ['Patient'], icon: <IconCalendar /> },
+    { label: 'Pacienții mei', to: '/doctor/patients', roles: ['Doctor'], icon: <IconUsers /> },
+    { label: 'Programări', to: '/doctor/appointments', roles: ['Doctor'], icon: <IconCalendar /> },
     { label: 'Analitica', to: '/doctor/analytics', roles: ['Doctor'], icon: <IconAnalytics /> },
     { label: 'Administrare', to: '/admin', roles: ['Admin'], icon: <IconDashboard /> },
     { label: 'Gestionare utilizatori', to: '/admin/users', roles: ['Admin'], icon: <IconUsers /> },

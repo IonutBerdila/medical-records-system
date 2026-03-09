@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -38,29 +38,29 @@ const doctorRecentEntries = [
 
 const quickCardsPatient = [
   {
-    label: 'Fisa medicala',
-    description: 'Acceseaza istoricul medical',
+    label: 'Fișa medicală',
+    description: 'Accesează istoricul medical',
     path: '/record',
     icon: IconDocument,
     color: 'bg-teal-50 text-teal-600'
   },
   {
-    label: 'Prescriptii',
+    label: 'Prescripții',
     description: 'Vezi medicamentele active',
     path: '/prescriptions',
     icon: IconPrescription,
     color: 'bg-amber-50 text-amber-700'
   },
   {
-    label: 'Acces si partajare',
-    description: 'Gestioneaza accesul doctorilor',
+    label: 'Acces și partajare',
+    description: 'Gestionează accesul doctorilor',
     path: '/share',
     icon: IconShare,
     color: 'bg-sky-50 text-sky-600'
   },
   {
-    label: 'Programari',
-    description: 'Planifica o vizita',
+    label: 'Programări',
+    description: 'Planifică o vizită',
     path: '/appointments',
     icon: IconCalendar,
     color: 'bg-indigo-50 text-indigo-600'
@@ -447,7 +447,7 @@ export const Dashboard: React.FC = () => {
         <Card className="p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Prescriptii active</h2>
+                <h2 className="text-xl font-semibold text-slate-900">Prescripții active</h2>
               <Badge variant="success" className="mt-2">
                 3 active
               </Badge>
