@@ -6,6 +6,7 @@ import { Button } from '../ui/Button';
 import { IconPulse, IconShield, IconClock, IconUsers } from '../ui/Icons';
 import { useAuth } from '../app/auth/AuthContext';
 import { registerUser, loginUser } from '../app/auth/authApi';
+import { fetchSpecialties, type SpecialtyOption } from '../app/metadata/metadataApi';
 import type { UserRole } from '../app/auth/types';
 
 type RoleChoice = Extract<UserRole, 'Patient' | 'Doctor' | 'Pharmacy'>;
@@ -18,8 +19,11 @@ interface FieldErrors {
   password?: string;
   confirmPassword?: string;
   terms?: string;
-  doctorLicenseNumber?: string;
   pharmacyLicenseNumber?: string;
+  professionalLicenseNumber?: string;
+  primarySpecialtyId?: string;
+  primaryInstitutionName?: string;
+  institutionCity?: string;
 }
 
 export const Signup: React.FC = () => {
@@ -34,12 +38,19 @@ export const Signup: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [doctorLicenseNumber, setDoctorLicenseNumber] = useState('');
   const [pharmacyLicenseNumber, setPharmacyLicenseNumber] = useState('');
   const [pharmacyName, setPharmacyName] = useState('');
+  const [professionalLicenseNumber, setProfessionalLicenseNumber] = useState('');
+  const [primarySpecialtyId, setPrimarySpecialtyId] = useState('');
+  const [primaryInstitutionName, setPrimaryInstitutionName] = useState('');
+  const [institutionCity, setInstitutionCity] = useState('');
+  const [specialties, setSpecialties] = useState<SpecialtyOption[] | null>(null);
+  const [specialtiesLoading, setSpecialtiesLoading] = useState(false);
+  const [specialtiesError, setSpecialtiesError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
+  const [doctorStep, setDoctorStep] = useState<1 | 2>(1);
 
   const dateInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -103,7 +114,7 @@ export const Signup: React.FC = () => {
     setDateOfBirth(isoDate ?? '');
   };
 
-  const validate = (): boolean => {
+  const validateStep1 = (): boolean => {
     const next: FieldErrors = {};
 
     if (!firstName.trim()) next.firstName = 'Prenumele este obligatoriu.';
@@ -137,11 +148,6 @@ export const Signup: React.FC = () => {
       next.terms = 'Trebuie să accepți termenii și politica de confidențialitate.';
     }
 
-    // Rol-specific
-    if (role === 'Doctor' && !doctorLicenseNumber.trim()) {
-      next.doctorLicenseNumber = 'Numărul de licență este obligatoriu pentru medici.';
-    }
-
     if (role === 'Pharmacy' && !pharmacyLicenseNumber.trim()) {
       next.pharmacyLicenseNumber = 'Numărul de licență este obligatoriu pentru farmacii.';
     }
@@ -150,11 +156,48 @@ export const Signup: React.FC = () => {
     return Object.keys(next).length === 0;
   };
 
+  const validateDoctorStep2 = (): boolean => {
+    const next: FieldErrors = {};
+
+    if (!professionalLicenseNumber.trim()) {
+      next.professionalLicenseNumber = 'Numărul licenței profesionale este obligatoriu pentru medici.';
+    }
+    if (!primarySpecialtyId) {
+      next.primarySpecialtyId = 'Specialitatea principală este obligatorie.';
+    }
+    if (!primaryInstitutionName.trim()) {
+      next.primaryInstitutionName = 'Instituția medicală principală este obligatorie.';
+    }
+
+    setErrors((prev) => ({ ...prev, ...next }));
+    return Object.keys(next).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) {
-      toast.error('Te rugăm să corectezi câmpurile evidențiate.');
-      return;
+
+    if (role === 'Doctor') {
+      if (doctorStep === 1) {
+        const ok = validateStep1();
+        if (!ok) {
+          toast.error('Te rugăm să corectezi câmpurile evidențiate.');
+          return;
+        }
+        setDoctorStep(2);
+        return;
+      }
+
+      const okStep2 = validateDoctorStep2();
+      if (!okStep2) {
+        toast.error('Te rugăm să completezi datele profesionale obligatorii.');
+        return;
+      }
+    } else {
+      const ok = validateStep1();
+      if (!ok) {
+        toast.error('Te rugăm să corectezi câmpurile evidențiate.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -172,7 +215,12 @@ export const Signup: React.FC = () => {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         dateOfBirth,
-        doctorLicenseNumber: role === 'Doctor' && doctorLicenseNumber.trim() ? doctorLicenseNumber.trim() : undefined
+        professionalLicenseNumber:
+          role === 'Doctor' && professionalLicenseNumber.trim() ? professionalLicenseNumber.trim() : undefined,
+        primarySpecialtyId: role === 'Doctor' && primarySpecialtyId ? primarySpecialtyId : undefined,
+        primaryInstitutionName:
+          role === 'Doctor' && primaryInstitutionName.trim() ? primaryInstitutionName.trim() : undefined,
+        institutionCity: role === 'Doctor' && institutionCity.trim() ? institutionCity.trim() : undefined
       });
 
       if (role === 'Patient') {
@@ -198,6 +246,33 @@ export const Signup: React.FC = () => {
 
   const isDoctor = role === 'Doctor';
   const isPharmacy = role === 'Pharmacy';
+
+  React.useEffect(() => {
+    if (!isDoctor) return;
+    if (specialties || specialtiesLoading) return;
+
+    const load = async () => {
+      setSpecialtiesLoading(true);
+      setSpecialtiesError(null);
+      try {
+        const data = await fetchSpecialties();
+        setSpecialties(data);
+      } catch (err: any) {
+        console.error(err);
+        setSpecialtiesError('Nu am putut încărca lista de specialități. Încearcă din nou mai târziu.');
+      } finally {
+        setSpecialtiesLoading(false);
+      }
+    };
+
+    void load();
+  }, [isDoctor, specialties, specialtiesLoading]);
+
+  React.useEffect(() => {
+    if (!isDoctor) {
+      setDoctorStep(1);
+    }
+  }, [isDoctor]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -269,235 +344,356 @@ export const Signup: React.FC = () => {
         {/* Dreapta: formular de creare cont */}
         <div className="flex flex-1 items-center justify-center bg-white p-6 lg:p-10 xl:p-12">
           <div className="w-full max-w-[440px]">
-            <h2 className="text-[24px] font-semibold text-slate-900">Creează cont</h2>
+            <h2 className="text-[24px] font-semibold text-slate-900">
+              {isDoctor && doctorStep === 2 ? 'Profil profesional' : 'Creează cont'}
+            </h2>
             <p className="mt-1.5 text-sm text-slate-600">
-              Începe să-ți gestionezi dosarul medical în siguranță.
+              {isDoctor
+                ? doctorStep === 1
+                  ? 'Completează datele de bază pentru acces în platformă.'
+                  : 'Aceste informații sunt necesare pentru verificarea și aprobarea contului de doctor.'
+                : 'Începe să-ți gestionezi dosarul medical în siguranță.'}
             </p>
 
             <form className="mt-6 flex flex-col gap-4" onSubmit={handleSubmit}>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Prenume"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  error={errors.firstName}
-                  showRequiredMark={false}
-                  required
-                />
-                <Input
-                  label="Nume"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  error={errors.lastName}
-                  showRequiredMark={false}
-                  required
-                />
-              </div>
-
-              {/* Data nașterii cu mască vizuală ZZ.LL.AAAA */}
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-slate-700">
-                  Data nașterii
-                </label>
-                <div className="relative">
-                  <input
-                    ref={dateInputRef}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="bday"
-                    maxLength={10}
-                    value={formatDateInput(dateOfBirthInput)}
-                    onChange={(e) => handleDateOfBirthChange(e.target.value)}
-                    onFocus={() => {
-                      const el = dateInputRef.current;
-                      if (!el) return;
-                      const len = el.value.length;
-                      // folosim rAF ca să mutăm cursorul după ce browserul procesează focusul
-                      requestAnimationFrame(() => {
-                        try {
-                          el.setSelectionRange(len, len);
-                        } catch {
-                          // ignore
-                        }
-                      });
-                    }}
-                    aria-invalid={!!errors.dateOfBirth}
-                    className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-transparent caret-slate-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 ${
-                      errors.dateOfBirth
-                        ? 'border-red-300 focus:border-red-500'
-                        : 'border-slate-200 focus:border-primary'
-                    }`}
-                    required
-                  />
-                  {/* Overlay cu masca ZZ.LL.AAAA: cifrele și punctele în culoare normală, literele-mască în gri */}
-                  <div className="pointer-events-none absolute inset-0 flex items-center px-4 text-sm">
-                    {formatDateMask(dateOfBirthInput).split('').map((ch, idx) => {
-                      const digitsLen = dateOfBirthInput.length;
-                      const isDigit = /\d/.test(ch);
-
-                      // Punctele devin „active” (închise la culoare) doar după ce utilizatorul a trecut de ele:
-                      // - primul punct (index 2) după a 3-a cifră
-                      // - al doilea punct (index 5) după a 5-a cifră
-                      let isActiveDot = false;
-                      if (ch === '.') {
-                        if (idx === 2 && digitsLen >= 3) isActiveDot = true;
-                        if (idx === 5 && digitsLen >= 5) isActiveDot = true;
-                      }
-
-                      const cls = isDigit || isActiveDot ? 'text-slate-900' : 'text-slate-300';
-                      return (
-                        <span key={idx} className={cls}>
-                          {ch}
-                        </span>
-                      );
-                    })}
-                  </div>
-                </div>
-                {errors.dateOfBirth && (
-                  <p className="text-xs text-red-600" role="alert">
-                    {errors.dateOfBirth}
-                  </p>
-                )}
-              </div>
-
-              <Input
-                label="Adresă de email"
-                type="email"
-                placeholder="nume@exemplu.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                error={errors.email}
-                showRequiredMark={false}
-                required
-              />
-
-              <Input
-                label="Parolă"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                helper="Cel puțin 8 caractere. Recomandat: litere mari/mici și cifre."
-                error={errors.password}
-                showPasswordToggle
-                showRequiredMark={false}
-                required
-              />
-
-              <Input
-                label="Confirmă parola"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                error={errors.confirmPassword}
-                showPasswordToggle
-                showRequiredMark={false}
-                required
-              />
-
-              {/* Selector rol: Pacient / Doctor / Farmacie */}
-              <div>
-                <p className="mb-1 text-sm font-medium text-slate-700">Sunt...</p>
-                <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 text-sm">
-                  {(['Patient', 'Doctor', 'Pharmacy'] as RoleChoice[]).map((r) => {
-                    const active = role === r;
-                    const label =
-                      r === 'Patient' ? 'Pacient' : r === 'Doctor' ? 'Doctor' : 'Farmacie';
-                    return (
-                      <button
-                        key={r}
-                        type="button"
-                        onClick={() => setRole(r)}
-                        className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
-                          active
-                            ? 'bg-[#0b85a3] text-white shadow-sm'
-                            : 'bg-transparent text-slate-700 hover:bg-white'
+              {isDoctor && (
+                <div className="mb-3">
+                  <div className="flex items-center gap-3 text-xs font-medium text-slate-600">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                          doctorStep === 1
+                            ? 'bg-[#0b85a3] text-white'
+                            : 'bg-slate-100 text-slate-700'
                         }`}
                       >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {(isDoctor || isPharmacy) && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                  Conturile de <strong>{isDoctor ? 'doctor' : 'farmacie'}</strong> necesită
-                  aprobarea unui administrator înainte de a putea folosi aplicația.
+                        1
+                      </span>
+                      <span
+                        className={
+                          doctorStep === 1 ? 'text-slate-900' : 'text-slate-500'
+                        }
+                      >
+                        Date de cont
+                      </span>
+                    </div>
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold ${
+                          doctorStep === 2
+                            ? 'bg-[#0b85a3] text-white'
+                            : 'bg-slate-100 text-slate-400'
+                        }`}
+                      >
+                        2
+                      </span>
+                      <span
+                        className={
+                          doctorStep === 2 ? 'text-slate-900' : 'text-slate-500'
+                        }
+                      >
+                        Profil profesional
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {isDoctor && (
-                <div className="grid gap-4 sm:grid-cols-2">
+              {/* PASUL 1 – date de cont (Doctor) sau formular simplu pentru celelalte roluri */}
+              {(!isDoctor || doctorStep === 1) && (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Prenume"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      error={errors.firstName}
+                      showRequiredMark={false}
+                      required
+                    />
+                    <Input
+                      label="Nume"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      error={errors.lastName}
+                      showRequiredMark={false}
+                      required
+                    />
+                  </div>
+
+                  {/* Data nașterii cu mască vizuală ZZ.LL.AAAA */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-slate-700">
+                      Data nașterii
+                    </label>
+                    <div className="relative">
+                      <input
+                        ref={dateInputRef}
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="bday"
+                        maxLength={10}
+                        value={formatDateInput(dateOfBirthInput)}
+                        onChange={(e) => handleDateOfBirthChange(e.target.value)}
+                        onFocus={() => {
+                          const el = dateInputRef.current;
+                          if (!el) return;
+                          const len = el.value.length;
+                          // folosim rAF ca să mutăm cursorul după ce browserul procesează focusul
+                          requestAnimationFrame(() => {
+                            try {
+                              el.setSelectionRange(len, len);
+                            } catch {
+                              // ignore
+                            }
+                          });
+                        }}
+                        aria-invalid={!!errors.dateOfBirth}
+                        className={`h-11 w-full rounded-xl border bg-white px-4 text-sm text-transparent caret-slate-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 ${
+                          errors.dateOfBirth
+                            ? 'border-red-300 focus:border-red-500'
+                            : 'border-slate-200 focus:border-primary'
+                        }`}
+                        required
+                      />
+                      {/* Overlay cu masca ZZ.LL.AAAA */}
+                      <div className="pointer-events-none absolute inset-0 flex items-center px-4 text-sm">
+                        {formatDateMask(dateOfBirthInput).split('').map((ch, idx) => {
+                          const digitsLen = dateOfBirthInput.length;
+                          const isDigit = /\d/.test(ch);
+
+                          let isActiveDot = false;
+                          if (ch === '.') {
+                            if (idx === 2 && digitsLen >= 3) isActiveDot = true;
+                            if (idx === 5 && digitsLen >= 5) isActiveDot = true;
+                          }
+
+                          const cls = isDigit || isActiveDot ? 'text-slate-900' : 'text-slate-300';
+                          return (
+                            <span key={idx} className={cls}>
+                              {ch}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {errors.dateOfBirth && (
+                      <p className="text-xs text-red-600" role="alert">
+                        {errors.dateOfBirth}
+                      </p>
+                    )}
+                  </div>
+
                   <Input
-                    label="Număr licență medic"
-                    placeholder="Ex: MD123456"
-                    value={doctorLicenseNumber}
-                    onChange={(e) => setDoctorLicenseNumber(e.target.value)}
-                    error={errors.doctorLicenseNumber}
+                    label="Adresă de email"
+                    type="email"
+                    placeholder="nume@exemplu.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    error={errors.email}
                     showRequiredMark={false}
                     required
                   />
-                  <Input
-                    label="Clinică / Spital"
-                    placeholder="Ex: City Medical Center"
-                  />
-                </div>
-              )}
 
-              {isPharmacy && (
-                <div className="grid gap-4 sm:grid-cols-2">
                   <Input
-                    label="Număr licență farmacie"
-                    placeholder="Ex: PH123456"
-                    value={pharmacyLicenseNumber}
-                    onChange={(e) => setPharmacyLicenseNumber(e.target.value)}
-                    error={errors.pharmacyLicenseNumber}
+                    label="Parolă"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    helper="Cel puțin 8 caractere. Recomandat: litere mari/mici și cifre."
+                    error={errors.password}
+                    showPasswordToggle
                     showRequiredMark={false}
                     required
                   />
-                  <Input
-                    label="Nume farmacie"
-                    placeholder="Ex: Downtown Pharmacy"
-                    value={pharmacyName}
-                    onChange={(e) => setPharmacyName(e.target.value)}
-                  />
-                </div>
-              )}
 
-              <div className="mt-1 flex items-start gap-2 text-sm">
-                <input
-                  id="terms"
-                  type="checkbox"
-                  checked={termsAccepted}
-                  onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
-                />
-                <label htmlFor="terms" className="text-slate-600">
-                  Sunt de acord cu{' '}
-                  <button
-                    type="button"
-                    className="font-medium text-primary underline-offset-2 hover:underline"
-                  >
-                    Termenii
-                  </button>{' '}
-                  și{' '}
-                  <button
-                    type="button"
-                    className="font-medium text-primary underline-offset-2 hover:underline"
-                  >
-                    Politica de confidențialitate
-                  </button>
-                  .
-                  {errors.terms && (
-                    <span className="mt-1 block text-xs text-red-600">{errors.terms}</span>
+                  <Input
+                    label="Confirmă parola"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    error={errors.confirmPassword}
+                    showPasswordToggle
+                    showRequiredMark={false}
+                    required
+                  />
+
+                  {/* Selector rol: Pacient / Doctor / Farmacie */}
+                  <div>
+                    <p className="mb-1 text-sm font-medium text-slate-700">Sunt...</p>
+                    <div className="inline-flex rounded-full border border-slate-200 bg-slate-50 p-0.5 text-sm">
+                      {(['Patient', 'Doctor', 'Pharmacy'] as RoleChoice[]).map((r) => {
+                        const active = role === r;
+                        const label =
+                          r === 'Patient' ? 'Pacient' : r === 'Doctor' ? 'Doctor' : 'Farmacie';
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setRole(r)}
+                            className={`px-4 py-1.5 rounded-full font-medium transition-colors ${
+                              active
+                                ? 'bg-[#0b85a3] text-white shadow-sm'
+                                : 'bg-transparent text-slate-700 hover:bg-white'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {isPharmacy && (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <Input
+                        label="Număr licență farmacie"
+                        placeholder="Ex: PH123456"
+                        value={pharmacyLicenseNumber}
+                        onChange={(e) => setPharmacyLicenseNumber(e.target.value)}
+                        error={errors.pharmacyLicenseNumber}
+                        showRequiredMark={false}
+                        required
+                      />
+                      <Input
+                        label="Nume farmacie"
+                        placeholder="Ex: Downtown Pharmacy"
+                        value={pharmacyName}
+                        onChange={(e) => setPharmacyName(e.target.value)}
+                      />
+                    </div>
                   )}
-                </label>
-              </div>
 
-              <Button type="submit" loading={loading} className="mt-2 w-full">
-                Creează cont
-              </Button>
+                  <div className="mt-1 flex items-start gap-2 text-sm">
+                    <input
+                      id="terms"
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary"
+                    />
+                    <label htmlFor="terms" className="text-slate-600">
+                      Sunt de acord cu{' '}
+                      <button
+                        type="button"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        Termenii
+                      </button>{' '}
+                      și{' '}
+                      <button
+                        type="button"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        Politica de confidențialitate
+                      </button>
+                      .
+                      {errors.terms && (
+                        <span className="mt-1 block text-xs text-red-600">{errors.terms}</span>
+                      )}
+                    </label>
+                  </div>
+                </>
+              )}
+
+              {/* PASUL 2 – profil profesional doctor */}
+              {isDoctor && doctorStep === 2 && (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-[#FEE2E2] bg-[#FEE2E2] px-4 py-3 text-sm text-[#EF4444]">
+                    Conturile de <strong>doctor</strong> necesită aprobarea unui administrator
+                    înainte de a putea folosi aplicația.
+                  </div>
+
+                  {/* Rând 1: Instituție medicală / Oraș instituție */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Instituție medicală"
+                      placeholder="Ex: Spitalul Clinic Județean"
+                      value={primaryInstitutionName}
+                      onChange={(e) => setPrimaryInstitutionName(e.target.value)}
+                      error={errors.primaryInstitutionName}
+                      showRequiredMark
+                      required
+                    />
+                    <Input
+                      label="Oraș instituție"
+                      placeholder="Ex: Cluj-Napoca"
+                      value={institutionCity}
+                      onChange={(e) => setInstitutionCity(e.target.value)}
+                      error={errors.institutionCity}
+                    />
+                  </div>
+
+                  {/* Rând 2: Licență profesională / Specialitate */}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Input
+                      label="Licență profesională"
+                      placeholder="Ex: 123456"
+                      value={professionalLicenseNumber}
+                      onChange={(e) => setProfessionalLicenseNumber(e.target.value)}
+                      error={errors.professionalLicenseNumber}
+                      showRequiredMark
+                      required
+                    />
+
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-slate-700">
+                        Specialitate principală
+                      </label>
+                      <select
+                        className={`block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary appearance-none bg-none ${
+                          primarySpecialtyId ? 'text-slate-900' : 'text-slate-500'
+                        }`}
+                        value={primarySpecialtyId}
+                        onChange={(e) => setPrimarySpecialtyId(e.target.value)}
+                      >
+                        <option value="">Selectează</option>
+                        {specialtiesLoading && <option value="">Se încarcă...</option>}
+                        {!specialtiesLoading &&
+                          specialties &&
+                          specialties.map((s) => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))}
+                      </select>
+                      {errors.primarySpecialtyId && (
+                        <p className="mt-1 text-xs text-red-600">{errors.primarySpecialtyId}</p>
+                      )}
+                      {specialtiesError && (
+                        <p className="mt-1 text-xs text-amber-700">{specialtiesError}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-500">
+                    Programul de lucru și disponibilitatea pentru programări se vor configura după
+                    aprobarea contului.
+                  </p>
+                </div>
+              )}
+
+              {/* Butoane acțiune */}
+              {isDoctor && doctorStep === 2 ? (
+                <div className="mt-4 flex gap-3">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-[120px]"
+                    onClick={() => setDoctorStep(1)}
+                  >
+                    Înapoi
+                  </Button>
+                  <Button type="submit" loading={loading} className="flex-1">
+                    Creează cont
+                  </Button>
+                </div>
+              ) : (
+                <Button type="submit" loading={loading} className="mt-2 w-full">
+                  {isDoctor ? 'Continuă' : 'Creează cont'}
+                </Button>
+              )}
             </form>
 
             <p className="mt-6 text-center text-sm text-slate-600">

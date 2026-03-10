@@ -13,6 +13,11 @@ public class DoctorProfile
 
     public string? LicenseNumber { get; set; }
 
+    /// <summary>
+    /// Durata implicită a unei consultații în minute (folosită pentru programări).
+    /// </summary>
+    public int ConsultationDurationMinutes { get; set; } = 30;
+
     public string? FirstName { get; set; }
 
     public string? LastName { get; set; }

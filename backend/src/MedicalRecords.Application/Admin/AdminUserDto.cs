@@ -11,6 +11,8 @@ public class AdminUserDto
     public string? FullName { get; set; }
     public string? PharmacyName { get; set; }
     public string? LicenseNumber { get; set; }
+    public string? DoctorPrimarySpecialtyName { get; set; }
+    public string? DoctorPrimaryInstitutionName { get; set; }
     
     // Approval fields (for Doctor/Pharmacy)
     public string? ApprovalStatus { get; set; }

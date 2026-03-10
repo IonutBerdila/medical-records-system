@@ -107,6 +107,42 @@ public class AuthService : IAuthService
                     });
                     break;
                 case "Doctor":
+                    var license = (req.ProfessionalLicenseNumber ?? req.DoctorLicenseNumber)?.Trim();
+                    if (string.IsNullOrWhiteSpace(license))
+                    {
+                        throw new AuthValidationException("Numărul licenței profesionale este obligatoriu pentru doctor.");
+                    }
+
+                    var licenseExists = await _dbContext.DoctorProfiles
+                        .AnyAsync(d => d.LicenseNumber == license);
+                    if (licenseExists)
+                    {
+                        throw new AuthValidationException("Există deja un doctor înregistrat cu acest număr de licență.");
+                    }
+
+                    if (req.PrimarySpecialtyId is null || req.PrimarySpecialtyId == Guid.Empty)
+                    {
+                        throw new AuthValidationException("Specialitatea principală este obligatorie pentru doctor.");
+                    }
+
+                    var normalizedInstitutionName = req.PrimaryInstitutionName?.Trim();
+                    var normalizedCity = string.IsNullOrWhiteSpace(req.InstitutionCity)
+                        ? null
+                        : req.InstitutionCity!.Trim();
+
+                    if (string.IsNullOrWhiteSpace(normalizedInstitutionName))
+                    {
+                        throw new AuthValidationException("Instituția medicală principală este obligatorie pentru doctor.");
+                    }
+
+                    var specialty = await _dbContext.Specialties
+                        .AsNoTracking()
+                        .FirstOrDefaultAsync(s => s.Id == req.PrimarySpecialtyId && s.IsActive);
+                    if (specialty is null)
+                    {
+                        throw new AuthValidationException("Specialitatea selectată nu este validă.");
+                    }
+
                     var doctorProfile = new DoctorProfile
                     {
                         Id = Guid.NewGuid(),
@@ -115,12 +151,51 @@ public class AuthService : IAuthService
                         FirstName = req.FirstName,
                         LastName = req.LastName,
                         DateOfBirth = dateOfBirthUtc,
-                        LicenseNumber = req.DoctorLicenseNumber,
+                        LicenseNumber = license,
                         CreatedAtUtc = utcNow,
+                        ConsultationDurationMinutes = 30,
                         ApprovalStatus = "Pending" // Doctor trebuie aprobat de admin
                     };
                     _dbContext.DoctorProfiles.Add(doctorProfile);
-                    
+
+                    // Specialitate principală
+                    _dbContext.DoctorSpecialties.Add(new DoctorSpecialty
+                    {
+                        DoctorProfileId = doctorProfile.Id,
+                        SpecialtyId = specialty.Id,
+                        IsPrimary = true
+                    });
+
+                    // Găsește sau creează instituția medicală principală
+                    var institutionQuery = _dbContext.MedicalInstitutions.AsQueryable();
+                    institutionQuery = institutionQuery.Where(i => i.Name.ToLower() == normalizedInstitutionName.ToLower());
+                    if (!string.IsNullOrEmpty(normalizedCity))
+                    {
+                        institutionQuery = institutionQuery.Where(i => (i.City ?? string.Empty).ToLower() == normalizedCity.ToLower());
+                    }
+
+                    var institution = await institutionQuery.FirstOrDefaultAsync();
+                    if (institution is null)
+                    {
+                        institution = new MedicalInstitution
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = normalizedInstitutionName,
+                            City = normalizedCity,
+                            IsActive = true
+                        };
+                        _dbContext.MedicalInstitutions.Add(institution);
+                    }
+
+                    _dbContext.DoctorInstitutions.Add(new DoctorInstitution
+                    {
+                        Id = Guid.NewGuid(),
+                        DoctorProfileId = doctorProfile.Id,
+                        MedicalInstitutionId = institution.Id,
+                        IsPrimaryInstitution = true,
+                        IsActive = true
+                    });
+
                     // Log audit event pentru înregistrare Doctor
                     if (_auditService != null)
                     {
@@ -132,7 +207,7 @@ public class AuthService : IAuthService
                             ActorRole = "Doctor",
                             EntityType = "DoctorProfile",
                             EntityId = doctorProfile.Id,
-                            MetadataJson = $"{{\"fullName\":\"{computedFullName}\",\"email\":\"{req.Email}\"}}"
+                            MetadataJson = $"{{\"fullName\":\"{computedFullName}\",\"email\":\"{req.Email}\",\"license\":\"{license}\",\"specialty\":\"{specialty.Name}\",\"institution\":\"{normalizedInstitutionName}\"}}"
                         });
                     }
                     break;

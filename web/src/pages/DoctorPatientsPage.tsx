@@ -28,7 +28,12 @@ export const DoctorPatientsPage: React.FC = () => {
           (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
           (err as { message?: string })?.message ||
           'Eroare la încărcare';
-        toast.error(msg);
+        toast.error(msg, {
+          id:
+            msg === 'Contul este în așteptarea aprobării de către administrator.'
+              ? 'doctor-approval-pending'
+              : undefined
+        });
       })
       .finally(() => setLoading(false));
   }, []);

@@ -2,16 +2,22 @@ import React, { useEffect } from 'react';
 
 interface ModalProps {
   open: boolean;
-  onClose: () => void;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
   title?: string;
   children: React.ReactNode;
   className?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, className = '' }) => {
+export const Modal: React.FC<ModalProps> = ({ open, onOpenChange, onClose, title, children, className = '' }) => {
   useEffect(() => {
     if (!open) return;
-    const handle = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const handle = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onOpenChange?.(false);
+        onClose?.();
+      }
+    };
     document.addEventListener('keydown', handle);
     document.body.style.overflow = 'hidden';
     return () => {
@@ -24,7 +30,14 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, title, children, cl
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-slate-900/50" aria-hidden onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-slate-900/50"
+        aria-hidden
+        onClick={() => {
+          onOpenChange?.(false);
+          onClose?.();
+        }}
+      />
       <div
         role="dialog"
         aria-modal="true"

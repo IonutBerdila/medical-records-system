@@ -8,7 +8,11 @@ export interface RegisterRequest {
   firstName?: string;
   lastName?: string;
   dateOfBirth?: string; // ISO date (YYYY-MM-DD)
-  doctorLicenseNumber?: string;
+  doctorLicenseNumber?: string; // compatibilitate
+  professionalLicenseNumber?: string;
+  primarySpecialtyId?: string;
+  primaryInstitutionName?: string;
+  institutionCity?: string;
 }
 
 export interface RegisterResponse {

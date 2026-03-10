@@ -24,8 +24,20 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 
         When(x => x.Role == "Doctor", () =>
         {
-            RuleFor(x => x.DoctorLicenseNumber)
-                .NotEmpty().WithMessage("Numărul de licență este obligatoriu pentru doctor.");
+            RuleFor(x => x.ProfessionalLicenseNumber)
+                .NotEmpty().WithMessage("Numărul licenței profesionale este obligatoriu pentru doctor.")
+                .MinimumLength(3).WithMessage("Numărul licenței profesionale trebuie să conțină cel puțin 3 caractere.");
+
+            RuleFor(x => x.PrimarySpecialtyId)
+                .NotNull().WithMessage("Specialitatea principală este obligatorie pentru doctor.")
+                .Must(id => id != Guid.Empty).WithMessage("Specialitatea principală este obligatorie pentru doctor.");
+
+            RuleFor(x => x.PrimaryInstitutionName)
+                .NotEmpty().WithMessage("Instituția medicală principală este obligatorie pentru doctor.")
+                .MinimumLength(3).WithMessage("Instituția medicală principală trebuie să conțină cel puțin 3 caractere.");
+
+            RuleFor(x => x.InstitutionCity)
+                .MaximumLength(128).WithMessage("Orașul instituției poate avea cel mult 128 de caractere.");
         });
 
         // Pentru celelalte roluri nu impunem reguli suplimentare, pentru a nu introduce breaking changes.

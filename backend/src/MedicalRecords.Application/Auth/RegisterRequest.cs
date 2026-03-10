@@ -35,8 +35,28 @@ public class RegisterRequest
     public DateTime? DateOfBirth { get; set; }
 
     /// <summary>
-    /// Număr licență medicală pentru Doctor (opțional).
+    /// Număr licență medicală pentru Doctor (compatibilitate).
     /// </summary>
     public string? DoctorLicenseNumber { get; set; }
+
+    /// <summary>
+    /// Număr licență profesională pentru Doctor (nou câmp recomandat).
+    /// </summary>
+    public string? ProfessionalLicenseNumber { get; set; }
+
+    /// <summary>
+    /// ID specialitate principală (obligatoriu pentru Doctor).
+    /// </summary>
+    public Guid? PrimarySpecialtyId { get; set; }
+
+    /// <summary>
+    /// Denumirea instituției medicale principale (clinică / spital).
+    /// </summary>
+    public string? PrimaryInstitutionName { get; set; }
+
+    /// <summary>
+    /// Orașul instituției medicale principale (opțional pentru MVP).
+    /// </summary>
+    public string? InstitutionCity { get; set; }
 }
 

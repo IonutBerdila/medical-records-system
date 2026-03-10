@@ -3,6 +3,7 @@ using System;
 using MedicalRecords.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MedicalRecords.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260309114624_Phase6_DoctorSchedulingMetadata")]
+    partial class Phase6_DoctorSchedulingMetadata
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -87,69 +90,6 @@ namespace MedicalRecords.Infrastructure.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("MedicalRecords.Domain.Entities.Appointment", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateOnly>("AppointmentDate")
-                        .HasColumnType("date");
-
-                    b.Property<string>("CancellationReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTime?>("CancelledAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DoctorInstitutionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<TimeSpan>("EndTime")
-                        .HasColumnType("interval");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<Guid>("PatientUserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Reason")
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)");
-
-                    b.Property<Guid>("SpecialtyId")
-                        .HasColumnType("uuid");
-
-                    b.Property<TimeSpan>("StartTime")
-                        .HasColumnType("interval");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<DateTime?>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PatientUserId");
-
-                    b.HasIndex("SpecialtyId");
-
-                    b.HasIndex("Status");
-
-                    b.HasIndex("DoctorInstitutionId", "AppointmentDate");
-
-                    b.ToTable("Appointments");
-                });
-
             modelBuilder.Entity("MedicalRecords.Domain.Entities.AuditEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -193,40 +133,6 @@ namespace MedicalRecords.Infrastructure.Migrations
                     b.HasIndex("PatientUserId", "TimestampUtc");
 
                     b.ToTable("AuditEvents");
-                });
-
-            modelBuilder.Entity("MedicalRecords.Domain.Entities.DoctorAvailabilityRule", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("DayOfWeek")
-                        .HasColumnType("integer");
-
-                    b.Property<Guid>("DoctorInstitutionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<TimeSpan>("EndTime")
-                        .HasColumnType("interval");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("SlotDurationMinutes")
-                        .HasColumnType("integer");
-
-                    b.Property<TimeSpan>("StartTime")
-                        .HasColumnType("interval");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DoctorInstitutionId", "DayOfWeek", "IsActive");
-
-                    b.ToTable("DoctorAvailabilityRules");
                 });
 
             modelBuilder.Entity("MedicalRecords.Domain.Entities.DoctorInstitution", b =>
@@ -897,36 +803,6 @@ namespace MedicalRecords.Infrastructure.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("MedicalRecords.Domain.Entities.Appointment", b =>
-                {
-                    b.HasOne("MedicalRecords.Domain.Entities.DoctorInstitution", null)
-                        .WithMany()
-                        .HasForeignKey("DoctorInstitutionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MedicalRecords.Domain.Entities.ApplicationUser", null)
-                        .WithMany()
-                        .HasForeignKey("PatientUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MedicalRecords.Domain.Entities.Specialty", null)
-                        .WithMany()
-                        .HasForeignKey("SpecialtyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("MedicalRecords.Domain.Entities.DoctorAvailabilityRule", b =>
-                {
-                    b.HasOne("MedicalRecords.Domain.Entities.DoctorInstitution", null)
-                        .WithMany()
-                        .HasForeignKey("DoctorInstitutionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("MedicalRecords.Domain.Entities.DoctorInstitution", b =>

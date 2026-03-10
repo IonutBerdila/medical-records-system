@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using MedicalRecords.Application.Validators;
+using MedicalRecords.Application.Metadata;
 using MedicalRecords.Api.Middleware;
 using MedicalRecords.Application.Common;
 using MedicalRecords.Application.Admin;
@@ -19,6 +20,7 @@ using MedicalRecords.Application.Pharmacy;
 using MedicalRecords.Application.Prescriptions;
 using MedicalRecords.Application.Records;
 using MedicalRecords.Application.ShareToken;
+using MedicalRecords.Application.Appointments;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Admin;
 using MedicalRecords.Infrastructure.Auth;
@@ -26,6 +28,8 @@ using MedicalRecords.Infrastructure.Audit;
 using MedicalRecords.Infrastructure.Consent;
 using MedicalRecords.Infrastructure.Data;
 using MedicalRecords.Infrastructure.Entries;
+using MedicalRecords.Infrastructure.Appointments;
+using MedicalRecords.Infrastructure.Metadata;
 using MedicalRecords.Infrastructure.Pharmacy;
 using MedicalRecords.Infrastructure.Prescriptions;
 using MedicalRecords.Infrastructure.Records;
@@ -113,6 +117,9 @@ builder.Services.AddScoped<IMedicalEntryService, MedicalEntryService>();
 builder.Services.AddScoped<IPrescriptionService, PrescriptionService>();
 builder.Services.AddScoped<IShareTokenService, ShareTokenService>();
 builder.Services.AddScoped<IPharmacyService, PharmacyService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
+builder.Services.AddScoped<IMetadataService, MetadataService>();
+builder.Services.AddScoped<IMetadataService, MetadataService>();
 
 // ProblemDetails for consistent error responses (used by global exception handling)
 builder.Services.AddProblemDetails();
@@ -183,6 +190,7 @@ using (var scope = app.Services.CreateScope())
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
     var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    var specialties = dbContext.Specialties;
     
     string[] roles = ["Patient", "Doctor", "Pharmacy", "Admin"];
 
@@ -221,6 +229,46 @@ using (var scope = app.Services.CreateScope())
         {
             await userManager.AddToRoleAsync(existingAdmin, "Admin");
         }
+    }
+
+    // Seed specialități medicale de bază (idempotent)
+    if (!await specialties.AsNoTracking().AnyAsync())
+    {
+        var initialSpecialties = new[]
+        {
+            "Medic de familie",
+            "Cardiolog",
+            "Dermatolog",
+            "Neurolog",
+            "Pediatru",
+            "Ortoped",
+            "Ginecolog",
+            "Urolog",
+            "Oftalmolog",
+            "Medic ORL",
+            "Endocrinolog",
+            "Gastroenterolog",
+            "Pneumolog",
+            "Reumatolog",
+            "Psihiatru",
+            "Oncolog",
+            "Nefrolog",
+            "Diabetolog",
+            "Chirurg general",
+            "Medic internist"
+        };
+
+        foreach (var name in initialSpecialties)
+        {
+            specialties.Add(new Specialty
+            {
+                Id = Guid.NewGuid(),
+                Name = name.Trim(),
+                IsActive = true
+            });
+        }
+
+        await dbContext.SaveChangesAsync();
     }
 }
 
