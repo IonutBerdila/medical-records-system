@@ -17,7 +17,6 @@ import { DoctorAppointmentsPage } from '../pages/DoctorAppointmentsPage';
 import { DoctorAnalyticsPage } from '../pages/DoctorAnalyticsPage';
 import { PharmacyPage } from '../pages/PharmacyPage';
 import { PharmacyPrescriptionPage } from '../pages/PharmacyPrescriptionPage';
-import { AdminPage } from '../pages/AdminPage';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { AdminAuditPage } from '../pages/AdminAuditPage';
 import { AdminApprovalsPage } from '../pages/AdminApprovalsPage';
@@ -193,7 +192,7 @@ export const AppRouter: React.FC = () => {
             <RequireAuth>
               <RequireRole allowedRoles={['Admin']}>
                 <AppShell>
-                  <AdminPage />
+                  <Navigate to="/admin/users" replace />
                 </AppShell>
               </RequireRole>
             </RequireAuth>

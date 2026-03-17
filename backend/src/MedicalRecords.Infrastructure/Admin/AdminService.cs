@@ -471,10 +471,7 @@ public class AdminService : IAdminService
     public async Task<AdminDashboardResponse> GetDashboardAsync()
     {
         var allUsers = await _userManager.Users.ToListAsync();
-        var counts = new AdminDashboardCounts
-        {
-            TotalUsers = allUsers.Count
-        };
+        var counts = new AdminDashboardCounts();
 
         foreach (var user in allUsers)
         {
@@ -484,6 +481,9 @@ public class AdminService : IAdminService
             if (roles.Contains("Pharmacy")) counts.Pharmacies++;
             if (roles.Contains("Admin")) counts.Admins++;
         }
+
+        // Total utilizatori afișat în dashboard = Pacienți + Medici + Farmacii (fără Admini).
+        counts.TotalUsers = counts.Patients + counts.Doctors + counts.Pharmacies;
 
         // Count pending approvals by role
         var pendingDoctors = await _doctorProfiles

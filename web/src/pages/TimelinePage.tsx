@@ -4,7 +4,14 @@ import { Card } from '../ui/Card';
 import { getMyEntries } from '../app/entries/entriesApi';
 import type { MedicalEntryDto } from '../app/entries/types';
 
-const ENTRY_TYPES = ['Diagnosis', 'Visit', 'Note', 'LabResult'];
+const ENTRY_TYPE_LABELS: Record<string, string> = {
+  Diagnosis: 'Diagnostic',
+  Visit: 'Vizită',
+  Note: 'Notă',
+  LabResult: 'Rezultat laborator'
+};
+
+const ENTRY_TYPES = Object.keys(ENTRY_TYPE_LABELS);
 
 export const TimelinePage: React.FC = () => {
   const [entries, setEntries] = useState<MedicalEntryDto[]>([]);
@@ -47,7 +54,7 @@ export const TimelinePage: React.FC = () => {
             <option value="">Toate</option>
             {ENTRY_TYPES.map((t) => (
               <option key={t} value={t}>
-                {t}
+                {ENTRY_TYPE_LABELS[t] ?? t}
               </option>
             ))}
           </select>
@@ -63,7 +70,7 @@ export const TimelinePage: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {e.type}
+                      {ENTRY_TYPE_LABELS[e.type] ?? e.type}
                     </span>
                     {(e.createdByDoctorFullName || e.createdByInstitutionName) && (
                       <p className="mt-1 text-xs text-slate-500">

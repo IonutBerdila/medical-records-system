@@ -7,7 +7,8 @@ const variantClasses: Record<BadgeVariant, string> = {
   success: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   warning: 'bg-amber-50 text-amber-700 border-amber-200',
   error: 'bg-red-50 text-red-700 border-red-200',
-  info: 'bg-sky-50 text-sky-700 border-sky-200'
+  // Info = albastru (aprox. #3B82F6 din Tailwind blue-500)
+  info: 'bg-blue-50 text-blue-700 border-blue-200'
 };
 
 interface BadgeProps {

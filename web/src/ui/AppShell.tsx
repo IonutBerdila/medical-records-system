@@ -10,10 +10,12 @@ import {
   IconShare,
   IconUsers,
   IconShield,
+  IconSettings,
   IconQr,
   IconClock,
   IconCalendar,
-  IconAnalytics
+  IconAnalytics,
+  IconSearch
 } from './Icons';
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -27,7 +29,6 @@ const ROUTE_TITLES: Record<string, string> = {
   '/doctor/patients': 'Pacienții mei',
   '/doctor/appointments': 'Programări',
   '/doctor/analytics': 'Analitica',
-  '/admin': 'Dashboard Admin',
   '/admin/users': 'Gestionare utilizatori',
   '/admin/approvals': 'Aprobări',
   '/admin/audit': 'Jurnale audit',
@@ -38,8 +39,8 @@ const ROUTE_TITLES: Record<string, string> = {
 };
 
 const ROUTE_SUBTITLES: Record<string, string> = {
-  '/share': 'Gestioneaza accesul la fisa ta medicala',
-  '/doctor/patients': 'Gestioneaza si vizualizeaza fisele pacientilor'
+  '/share': 'Gestionează accesul la fișa ta medicală',
+  '/doctor/patients': 'Gestionează și vizualizează fișele pacienților'
 };
 
 function getPageTitle(pathname: string): string {
@@ -79,6 +80,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       : getPageSubtitle(location.pathname);
   const isDashboard = location.pathname === '/dashboard';
 
+  const pendingApprovals = (user as any)?.adminDashboardCounts?.pendingApprovalsTotal as number | undefined;
+
   const navItems: NavItem[] = [
     { label: 'Dashboard', to: '/dashboard', roles: ['Patient', 'Doctor', 'Pharmacy', 'Admin'], icon: <IconDashboard /> },
     { label: 'Fișa medicală', to: '/record', roles: ['Patient'], icon: <IconDocument /> },
@@ -89,12 +92,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     { label: 'Pacienții mei', to: '/doctor/patients', roles: ['Doctor'], icon: <IconUsers /> },
     { label: 'Programări', to: '/doctor/appointments', roles: ['Doctor'], icon: <IconCalendar /> },
     { label: 'Analitica', to: '/doctor/analytics', roles: ['Doctor'], icon: <IconAnalytics /> },
-    { label: 'Administrare', to: '/admin', roles: ['Admin'], icon: <IconDashboard /> },
     { label: 'Gestionare utilizatori', to: '/admin/users', roles: ['Admin'], icon: <IconUsers /> },
-    { label: 'Aprobari', to: '/admin/approvals', roles: ['Admin'], icon: <IconShield />, badge: '3' },
-    { label: 'Jurnale audit', to: '/admin/audit', roles: ['Admin'], icon: <IconDocument /> },
+    {
+      label: 'Aprobări',
+      to: '/admin/approvals',
+      roles: ['Admin'],
+      icon: <IconShield />,
+      badge: pendingApprovals && pendingApprovals > 0 ? String(pendingApprovals) : undefined
+    },
+    { label: 'Jurnale audit', to: '/admin/audit', roles: ['Admin'], icon: <IconSearch /> },
     { label: 'Rapoarte', to: '/admin/reports', roles: ['Admin'], icon: <IconDocument /> },
-    { label: 'Configurare sistem', to: '/admin/config', roles: ['Admin'], icon: <IconShield />, settings: true },
+    { label: 'Configurare sistem', to: '/admin/config', roles: ['Admin'], icon: <IconSettings />, settings: true },
     { label: 'Farmacie', to: '/pharmacy', roles: ['Pharmacy'], icon: <IconQr /> }
   ];
 
@@ -164,8 +172,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             </NavLink>
           ))}
           {role === 'Admin' && adminSettingsNav.length > 0 && (
-            <div className="pt-4">
-              <p className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Setari</p>
+            <div className="pt-1">
               <div className="space-y-0.5">
                 {adminSettingsNav.map((item) => (
                   <NavLink
@@ -238,10 +245,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
                 </button>
                 <span className="hidden sm:block h-8 w-px bg-slate-200" aria-hidden />
-                <span className="hidden sm:inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-medium text-slate-700">
-                  {user.email?.slice(0, 2).toUpperCase() ?? '?'}
+                <span className="hidden sm:inline-flex h-8 px-3 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">
+                  {role === 'Admin' ? 'ADMIN' : user.email?.slice(0, 2).toUpperCase() ?? '?'}
                 </span>
-                {role && <RoleBadge role={role} />}
+                {role && role !== 'Admin' && <RoleBadge role={role} />}
                 <button
                   type="button"
                   onClick={() => {

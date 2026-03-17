@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
@@ -9,10 +9,17 @@ import {
   IconPrescription,
   IconShare,
   IconUsers,
+  IconDoctor,
+  IconPatient,
+  IconPharmacyPerson,
   IconDashboard,
   IconClock,
-  IconCalendar
+  IconCalendar,
+  IconShield,
+  IconAlert
 } from '../ui/Icons';
+import { getAdminDashboard } from '../app/admin/adminApi';
+import type { AdminDashboardResponse } from '../app/admin/types';
 
 const statCardsDoctor = [
   { label: 'Pacientii mei', value: '147', sub: '+5 saptamana aceasta', icon: IconUsers, color: 'text-sky-600 bg-sky-50', subColor: 'text-emerald-600' },
@@ -161,9 +168,9 @@ const latestEntries = [
 
 const adminStatCards = [
   { label: 'Total utilizatori', value: '1,247', sub: '+12% fata de perioada anterioara', icon: IconUsers, color: 'text-sky-600 bg-sky-50' },
-  { label: 'Pacienti', value: '892', sub: '+8% fata de perioada anterioara', icon: IconUsers, color: 'text-emerald-600 bg-emerald-50' },
-  { label: 'Medici', value: '245', sub: '+3% fata de perioada anterioara', icon: IconUsers, color: 'text-indigo-600 bg-indigo-50' },
-  { label: 'Farmacii', value: '110', sub: '+5% fata de perioada anterioara', icon: IconDocument, color: 'text-amber-600 bg-amber-50' }
+  { label: 'Pacienti', value: '892', sub: '+8% fata de perioada anterioara', icon: IconPatient, color: 'text-emerald-600 bg-emerald-50' },
+  { label: 'Medici', value: '245', sub: '+3% fata de perioada anterioara', icon: IconDoctor, color: 'text-indigo-600 bg-indigo-50' },
+  { label: 'Farmacii', value: '110', sub: '+5% fata de perioada anterioara', icon: IconPharmacyPerson, color: 'text-amber-600 bg-amber-50' }
 ] as const;
 
 const adminAuditEvents = [
@@ -177,6 +184,28 @@ export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const role = (user?.roles[0] ?? 'Patient') as UserRole;
+
+  const [adminData, setAdminData] = useState<AdminDashboardResponse | null>(null);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminError, setAdminError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (role !== 'Admin') return;
+    setAdminLoading(true);
+    setAdminError(null);
+    getAdminDashboard()
+      .then((res) => {
+        setAdminData(res);
+      })
+      .catch((err: any) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load admin dashboard', err);
+        setAdminError(err?.response?.data?.message ?? 'Eroare la încărcarea dashboard-ului admin.');
+      })
+      .finally(() => {
+        setAdminLoading(false);
+      });
+  }, [role]);
 
   if (role !== 'Patient') {
     if (role === 'Doctor') {
@@ -267,58 +296,106 @@ export const Dashboard: React.FC = () => {
     }
 
     if (role === 'Admin') {
+      const counts = adminData?.counts;
+      const pendingApprovals = counts?.pendingApprovalsTotal ?? 0;
+      const pendingSummaryParts: string[] = [];
+      if ((counts?.pendingDoctors ?? 0) > 0) {
+        pendingSummaryParts.push(
+          `${counts?.pendingDoctors} ${counts?.pendingDoctors === 1 ? 'medic' : 'medici'}`
+        );
+      }
+      if ((counts?.pendingPharmacies ?? 0) > 0) {
+        pendingSummaryParts.push(
+          `${counts?.pendingPharmacies} ${counts?.pendingPharmacies === 1 ? 'farmacie' : 'farmacii'}`
+        );
+      }
+      const pendingSummary =
+        pendingApprovals > 0
+          ? `${pendingSummaryParts.join(', ')} așteaptă verificarea`
+          : 'Nicio aprobare în așteptare';
+
+      const securityAlertsCount = adminData?.recentActivity.length ?? 0;
+
       return (
         <div className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {adminStatCards.map((card) => (
-              <Card key={card.label} className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-4xl font-bold text-slate-900">{card.value}</p>
-                    <p className="mt-1 text-base font-medium text-slate-700">{card.label}</p>
-                    <p className="mt-2 text-sm text-emerald-600">{card.sub}</p>
-                  </div>
-                  <span className={`inline-flex h-11 w-11 items-center justify-center rounded-xl ${card.color}`}>
-                    <card.icon className="h-5 w-5" />
-                  </span>
-                </div>
-              </Card>
-            ))}
+            <Card className="p-5">
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-bold text-slate-900">
+                  {adminLoading ? '—' : counts?.totalUsers ?? 0}
+                </p>
+                <p className="text-base font-medium text-slate-700">Total utilizatori</p>
+              </div>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-bold text-slate-900">
+                  {adminLoading ? '—' : counts?.patients ?? 0}
+                </p>
+                <p className="text-base font-medium text-slate-700">Pacienți</p>
+              </div>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-bold text-slate-900">
+                  {adminLoading ? '—' : counts?.doctors ?? 0}
+                </p>
+                <p className="text-base font-medium text-slate-700">Medici</p>
+              </div>
+            </Card>
+            <Card className="p-5">
+              <div className="flex items-baseline gap-2">
+                <p className="text-4xl font-bold text-slate-900">
+                  {adminLoading ? '—' : counts?.pharmacies ?? 0}
+                </p>
+                <p className="text-base font-medium text-slate-700">Farmacii</p>
+              </div>
+            </Card>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <Card className="border-amber-200 bg-amber-50/60 p-5">
-              <div className="flex items-start gap-3">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
-                  <IconDocument className="h-5 w-5" />
+              <div className="flex items-start gap-3 pl-4 sm:pl-8">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                  <IconShield className="h-6 w-6" />
                 </span>
-                <div>
-                  <p className="text-4xl font-bold text-amber-600">3</p>
-                  <p className="text-base font-semibold text-amber-700">Aprobari in asteptare</p>
-                  <p className="mt-2 text-sm text-amber-700">2 medici, 1 farmacie asteapta verificarea</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-bold text-amber-600">
+                      {adminLoading ? '—' : pendingApprovals}
+                    </p>
+                    <p className="text-base font-semibold text-amber-700">Aprobări în așteptare</p>
+                  </div>
+                  <p className="text-sm text-amber-700">{pendingSummary}</p>
                   <button
                     type="button"
-                    className="mt-4 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
-                    onClick={() => navigate('/admin/users')}
+                    className="mt-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600"
+                    onClick={() => navigate('/admin/approvals')}
                   >
-                    Revizuieste
+                    Revizuiește
                   </button>
                 </div>
               </div>
             </Card>
 
             <Card className="border-red-200 bg-red-50/60 p-5">
-              <div className="flex items-start gap-3">
-                <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-red-100 text-red-600">
-                  <IconDashboard className="h-5 w-5" />
+              <div className="flex items-start gap-3 pl-4 sm:pl-8">
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-red-100 text-red-600">
+                  <IconAlert className="h-6 w-6" />
                 </span>
-                <div>
-                  <p className="text-4xl font-bold text-red-600">7</p>
-                  <p className="text-base font-semibold text-red-700">Alerte de securitate</p>
-                  <p className="mt-2 text-sm text-red-700">Incercari esuate de autentificare in ultimele 24 ore</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-4xl font-bold text-red-600">
+                      {adminLoading ? '—' : securityAlertsCount}
+                    </p>
+                    <p className="text-base font-semibold text-red-700">Alerte de securitate</p>
+                  </div>
+                  <p className="text-sm text-red-700">
+                    Număr de evenimente de audit recente.
+                  </p>
                   <button
                     type="button"
-                    className="mt-4 rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
+                    className="mt-2 rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600"
                     onClick={() => navigate('/admin/audit')}
                   >
                     Vezi detalii
@@ -343,6 +420,11 @@ export const Dashboard: React.FC = () => {
               </button>
             </div>
             <div className="overflow-hidden">
+              {adminError && (
+                <div className="px-5 py-3 text-sm text-red-700 bg-red-50 border-b border-red-200">
+                  {adminError}
+                </div>
+              )}
               <table className="min-w-full divide-y divide-slate-100 text-sm">
                 <thead className="bg-slate-50">
                   <tr>
@@ -354,17 +436,38 @@ export const Dashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
-                  {adminAuditEvents.map((event) => (
-                    <tr key={`${event.time}-${event.actor}-${event.action}`}>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-700">{event.time}</td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-700">{event.actor}</td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-700">{event.action}</td>
-                      <td className="whitespace-nowrap px-5 py-3 text-slate-700">{event.target}</td>
-                      <td className="whitespace-nowrap px-5 py-3 text-right">
-                        <Badge variant={event.statusVariant}>{event.status}</Badge>
+                  {adminLoading && !adminData && (
+                    <tr>
+                      <td className="px-5 py-4 text-sm text-slate-500" colSpan={5}>
+                        Se încarcă evenimentele de audit...
                       </td>
                     </tr>
-                  ))}
+                  )}
+                  {!adminLoading && adminData && adminData.recentActivity.length === 0 && (
+                    <tr>
+                      <td className="px-5 py-4 text-sm text-slate-500" colSpan={5}>
+                        Nicio activitate recentă.
+                      </td>
+                    </tr>
+                  )}
+                  {adminData &&
+                    adminData.recentActivity.map((event) => (
+                      <tr key={event.id}>
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-700">
+                          {new Date(event.timestampUtc).toLocaleString('ro-RO')}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-700">
+                          {event.actorEmail ?? event.actorRole ?? '-'}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-700">{event.action}</td>
+                        <td className="whitespace-nowrap px-5 py-3 text-slate-700">
+                          {event.patientEmail ?? event.entityType ?? '-'}
+                        </td>
+                        <td className="whitespace-nowrap px-5 py-3 text-right text-xs text-slate-400">
+                          {event.ipAddress ?? ''}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

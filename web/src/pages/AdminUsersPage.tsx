@@ -5,9 +5,8 @@ import { PageHeader } from '../ui/PageHeader';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Modal } from '../ui/Modal';
 import { Tabs } from '../ui/Tabs';
-import { getAdminUsers, approveUser, rejectUser } from '../app/admin/adminApi';
+import { getAdminUsers } from '../app/admin/adminApi';
 import type { AdminUserDto } from '../app/admin/types';
 
 const ROLES = [
@@ -34,8 +33,6 @@ export const AdminUsersPage: React.FC = () => {
   const [users, setUsers] = useState<AdminUserDto[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [rejectModal, setRejectModal] = useState<{ user: AdminUserDto; reason: string } | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchUsers = useCallback(() => {
     setLoading(true);
@@ -78,72 +75,39 @@ export const AdminUsersPage: React.FC = () => {
     });
   }, [role, status, debouncedSearch, setSearchParams]);
 
-  const handleApprove = (user: AdminUserDto) => {
-    setActionLoading(user.userId);
-    approveUser(user.userId)
-      .then(() => {
-        toast.success('Cont aprobat.');
-        fetchUsers();
-      })
-      .catch((err) => {
-        toast.error(err.response?.data?.message ?? 'Eroare la aprobare.');
-      })
-      .finally(() => setActionLoading(null));
-  };
-
-  const handleRejectSubmit = () => {
-    if (!rejectModal || !rejectModal.reason.trim()) {
-      toast.error('Introduceți motivul respingerii.');
-      return;
-    }
-    setActionLoading(rejectModal.user.userId);
-    rejectUser(rejectModal.user.userId, { reason: rejectModal.reason.trim() })
-      .then(() => {
-        toast.success('Cont respins.');
-        setRejectModal(null);
-        fetchUsers();
-      })
-      .catch((err) => {
-        toast.error(err.response?.data?.message ?? 'Eroare la respingere.');
-      })
-      .finally(() => setActionLoading(null));
-  };
-
   const displayName = (u: AdminUserDto) => u.fullName || u.pharmacyName || u.email;
   const approvalStatus = (u: AdminUserDto) => u.approvalStatus;
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Utilizatori"
-        description="Lista utilizatori cu filtre și acțiuni de aprobare/respingere."
-      />
       <Card className="p-4">
-        <Tabs
-          tabs={ROLES}
-          activeId={role}
-          onChange={(id) => { setRole(id); setSkip(0); }}
-        />
-        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
-          <Input
-            type="text"
-            placeholder="Căutare email / nume / licență..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setSkip(0); }}
-            className="max-w-xs"
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <Tabs
+            tabs={ROLES}
+            activeId={role}
+            onChange={(id) => { setRole(id); setSkip(0); }}
           />
-          {(role === 'Doctor' || role === 'Pharmacy') && (
-            <select
-              value={status}
-              onChange={(e) => { setStatus(e.target.value); setSkip(0); }}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            >
-              <option value="">Toate statusurile</option>
-              <option value="Pending">În așteptare</option>
-              <option value="Approved">Aprobate</option>
-              <option value="Rejected">Respinse</option>
-            </select>
-          )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center w-full">
+            <Input
+              type="text"
+              placeholder="Căutare email / nume / licență"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setSkip(0); }}
+              className="w-full sm:w-[320px] md:w-[340px]"
+            />
+            {(role === 'Doctor' || role === 'Pharmacy') && (
+              <select
+                value={status}
+                onChange={(e) => { setStatus(e.target.value); setSkip(0); }}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Toate statusurile</option>
+                <option value="Pending">În așteptare</option>
+                <option value="Approved">Aprobate</option>
+                <option value="Rejected">Respinse</option>
+              </select>
+            )}
+          </div>
         </div>
       </Card>
 
@@ -162,7 +126,6 @@ export const AdminUsersPage: React.FC = () => {
                   <th className="px-4 py-3 font-medium text-slate-700">Nume / Farmacie</th>
                   <th className="px-4 py-3 font-medium text-slate-700">Status</th>
                   <th className="px-4 py-3 font-medium text-slate-700">Creat</th>
-                  <th className="px-4 py-3 font-medium text-slate-700">Acțiuni</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,7 +142,7 @@ export const AdminUsersPage: React.FC = () => {
                               ? 'text-teal-600'
                               : approvalStatus(u) === 'Rejected'
                               ? 'text-red-600'
-                              : 'text-amber-600'
+                              : 'text-blue-500'
                           }
                         >
                           {approvalStatus(u)}
@@ -190,28 +153,6 @@ export const AdminUsersPage: React.FC = () => {
                       {u.createdAtUtc
                         ? new Date(u.createdAtUtc).toLocaleDateString('ro-RO')
                         : '-'}
-                    </td>
-                    <td className="px-4 py-3">
-                      {approvalStatus(u) === 'Pending' && (
-                        <span className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            disabled={actionLoading !== null}
-                            onClick={() => handleApprove(u)}
-                          >
-                            Aprobă
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={actionLoading !== null}
-                            onClick={() => setRejectModal({ user: u, reason: '' })}
-                          >
-                            Respinge
-                          </Button>
-                        </span>
-                      )}
                     </td>
                   </tr>
                 ))}
@@ -246,39 +187,6 @@ export const AdminUsersPage: React.FC = () => {
         )}
       </Card>
 
-      <Modal
-        open={!!rejectModal}
-        onClose={() => setRejectModal(null)}
-        title="Respinge cont"
-      >
-        {rejectModal && (
-          <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Respinge utilizatorul <strong>{rejectModal.user.email}</strong>. Motivul este obligatoriu.
-            </p>
-            <textarea
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              rows={3}
-              maxLength={500}
-              placeholder="Motivul respingerii..."
-              value={rejectModal.reason}
-              onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setRejectModal(null)}>
-                Anulare
-              </Button>
-              <Button
-                variant="primary"
-                disabled={!rejectModal.reason.trim() || actionLoading !== null}
-                onClick={handleRejectSubmit}
-              >
-                Respinge
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };
