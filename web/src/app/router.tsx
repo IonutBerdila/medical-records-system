@@ -13,6 +13,7 @@ import { ShareAccessPage } from '../pages/ShareAccessPage';
 import { DoctorPatientsPage } from '../pages/DoctorPatientsPage';
 import { DoctorPatientDetailPage } from '../pages/DoctorPatientDetailPage';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
+import { AssistantPage } from '../pages/AssistantPage';
 import { DoctorAppointmentsPage } from '../pages/DoctorAppointmentsPage';
 import { DoctorAnalyticsPage } from '../pages/DoctorAnalyticsPage';
 import { PharmacyPage } from '../pages/PharmacyPage';
@@ -85,6 +86,18 @@ export const AppRouter: React.FC = () => {
               <RequireRole allowedRoles={['Patient']}>
                 <AppShell>
                   <AppointmentsPage />
+                </AppShell>
+              </RequireRole>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/assistant"
+          element={
+            <RequireAuth>
+              <RequireRole allowedRoles={['Patient']}>
+                <AppShell>
+                  <AssistantPage />
                 </AppShell>
               </RequireRole>
             </RequireAuth>

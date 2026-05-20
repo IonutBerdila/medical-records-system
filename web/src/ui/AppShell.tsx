@@ -15,7 +15,8 @@ import {
   IconClock,
   IconCalendar,
   IconAnalytics,
-  IconSearch
+  IconSearch,
+  IconChat
 } from './Icons';
 
 const ROUTE_TITLES: Record<string, string> = {
@@ -24,6 +25,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/record': 'Fișa medicală',
   '/timeline': 'Istoric',
   '/appointments': 'Programări',
+  '/assistant': 'Asistent AI',
   '/prescriptions': 'Prescripții',
   '/share': 'Acces și partajare',
   '/doctor/patients': 'Pacienții mei',
@@ -40,6 +42,7 @@ const ROUTE_TITLES: Record<string, string> = {
 
 const ROUTE_SUBTITLES: Record<string, string> = {
   '/share': 'Gestionează accesul la fișa ta medicală',
+  '/assistant': 'Orientare generală și îndrumare către specialistul potrivit',
   '/doctor/patients': 'Gestionează și vizualizează fișele pacienților'
 };
 
@@ -89,6 +92,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     { label: 'Prescripții', to: '/prescriptions', roles: ['Patient'], icon: <IconPrescription /> },
     { label: 'Acces și partajare', to: '/share', roles: ['Patient'], icon: <IconShare /> },
     { label: 'Programări', to: '/appointments', roles: ['Patient'], icon: <IconCalendar /> },
+    { label: 'Asistent AI', to: '/assistant', roles: ['Patient'], icon: <IconChat /> },
     { label: 'Pacienții mei', to: '/doctor/patients', roles: ['Doctor'], icon: <IconUsers /> },
     { label: 'Programări', to: '/doctor/appointments', roles: ['Doctor'], icon: <IconCalendar /> },
     { label: 'Analitica', to: '/doctor/analytics', roles: ['Doctor'], icon: <IconAnalytics /> },
