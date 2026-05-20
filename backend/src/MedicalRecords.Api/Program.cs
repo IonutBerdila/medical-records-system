@@ -12,6 +12,7 @@ using MedicalRecords.Application.Metadata;
 using MedicalRecords.Api.Middleware;
 using MedicalRecords.Application.Common;
 using MedicalRecords.Application.Admin;
+using MedicalRecords.Application.AiSummary;
 using MedicalRecords.Application.Auth;
 using MedicalRecords.Application.Audit;
 using MedicalRecords.Application.Consent;
@@ -23,6 +24,7 @@ using MedicalRecords.Application.ShareToken;
 using MedicalRecords.Application.Appointments;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Admin;
+using MedicalRecords.Infrastructure.AiSummary;
 using MedicalRecords.Infrastructure.Auth;
 using MedicalRecords.Infrastructure.Audit;
 using MedicalRecords.Infrastructure.Consent;
@@ -120,6 +122,12 @@ builder.Services.AddScoped<IPharmacyService, PharmacyService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IMetadataService, MetadataService>();
 builder.Services.AddScoped<IMetadataService, MetadataService>();
+
+// AI Medical Summary (OpenAI) – configurare + client HTTP tipizat + serviciu
+builder.Services.Configure<AiSummaryOptions>(
+    builder.Configuration.GetSection(AiSummaryOptions.SectionName));
+builder.Services.AddHttpClient<IAiCompletionClient, OpenAiCompletionClient>();
+builder.Services.AddScoped<IAiSummaryService, AiSummaryService>();
 
 // ProblemDetails for consistent error responses (used by global exception handling)
 builder.Services.AddProblemDetails();

@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using MedicalRecords.Application.Admin;
+using MedicalRecords.Application.AiSummary;
 using MedicalRecords.Application.Entries;
 using MedicalRecords.Application.Prescriptions;
 using MedicalRecords.Application.Records;
+using MedicalRecords.Infrastructure.AiSummary;
 using MedicalRecords.Infrastructure.Auth;
 using MedicalRecords.Infrastructure.Consent;
 using Microsoft.AspNetCore.Authorization;
@@ -19,6 +21,7 @@ public class PatientsController : ControllerBase
     private readonly IMedicalRecordService _recordService;
     private readonly IMedicalEntryService _entryService;
     private readonly IPrescriptionService _prescriptionService;
+    private readonly IAiSummaryService _aiSummaryService;
     private readonly IApprovalGuard _approvalGuard;
     private readonly ILogger<PatientsController> _logger;
 
@@ -26,12 +29,14 @@ public class PatientsController : ControllerBase
         IMedicalRecordService recordService,
         IMedicalEntryService entryService,
         IPrescriptionService prescriptionService,
+        IAiSummaryService aiSummaryService,
         IApprovalGuard approvalGuard,
         ILogger<PatientsController> logger)
     {
         _recordService = recordService;
         _entryService = entryService;
         _prescriptionService = prescriptionService;
+        _aiSummaryService = aiSummaryService;
         _approvalGuard = approvalGuard;
         _logger = logger;
     }
@@ -390,6 +395,52 @@ public class PatientsController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return StatusCode(409, new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Generează un rezumat medical asistat de AI pentru pacient.
+    /// Operația apelează OpenAI, consumă tokeni și creează un eveniment de audit,
+    /// de aceea este expusă ca POST. Doar pentru medici cu consimțământ activ.
+    /// Rezumatul sintetizează datele existente; nu oferă diagnostic sau tratament.
+    /// </summary>
+    [HttpPost("{patientUserId:guid}/ai-summary")]
+    [ProducesResponseType(typeof(AiSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    public async Task<IActionResult> GenerateAiSummary(Guid patientUserId, CancellationToken cancellationToken)
+    {
+        var doctorUserId = GetCurrentUserId();
+        if (doctorUserId == null) return Unauthorized();
+
+        try
+        {
+            await _approvalGuard.EnsureApprovedAsync(doctorUserId.Value, "Doctor");
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+
+        try
+        {
+            var result = await _aiSummaryService.GenerateForPatientAsync(
+                doctorUserId.Value, patientUserId, cancellationToken);
+            return Ok(result);
+        }
+        catch (ConsentDeniedException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (AiSummaryUnavailableException ex)
+        {
+            // Funcție dezactivată, cheie API lipsă sau eroare la apelul OpenAI.
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { message = ex.Message });
         }
     }
 }

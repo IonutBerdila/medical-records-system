@@ -17,6 +17,7 @@ import {
   issuePrescriptionDraft,
   deletePrescriptionDraft,
 } from "../app/prescriptions/prescriptionsApi";
+import { generateAiSummary } from "../app/aiSummary/aiSummaryApi";
 import type { MedicalRecordDto } from "../app/records/types";
 import type { MedicalEntryDto } from "../app/entries/types";
 import type { CreateMedicalEntryRequest } from "../app/entries/types";
@@ -25,6 +26,7 @@ import type {
   CreatePrescriptionItemRequest,
   PrescriptionDto,
 } from "../app/prescriptions/types";
+import type { AiSummaryDto } from "../app/aiSummary/types";
 import { getInitials } from "../app/utils/initials";
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
@@ -96,6 +98,9 @@ export const DoctorPatientDetailPage: React.FC = () => {
   const [prescriptions, setPrescriptions] = useState<PrescriptionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [aiSummary, setAiSummary] = useState<AiSummaryDto | null>(null);
+  const [aiSummaryLoading, setAiSummaryLoading] = useState(false);
+  const [aiSummaryError, setAiSummaryError] = useState<string | null>(null);
   const [entryForm, setEntryForm] = useState<CreateMedicalEntryRequest>({
     type: "Note",
     title: "",
@@ -530,6 +535,53 @@ export const DoctorPatientDetailPage: React.FC = () => {
     }));
   };
 
+  const handleGenerateAiSummary = async () => {
+    if (!patientUserId) return;
+    setAiSummaryLoading(true);
+    setAiSummaryError(null);
+    try {
+      const result = await generateAiSummary(patientUserId);
+      setAiSummary(result);
+    } catch (err: unknown) {
+      type ApiErr = {
+        response?: {
+          status?: number;
+          data?: { message?: string; title?: string; detail?: string };
+        };
+        message?: string;
+      };
+      const e = err as ApiErr;
+      const status = e.response?.status;
+      const apiMsg =
+        e.response?.data?.detail ||
+        e.response?.data?.message ||
+        e.response?.data?.title;
+      let message: string;
+      if (status === 403) {
+        message =
+          apiMsg ||
+          "Acces interzis: nu ai consimțământ activ pentru acest pacient.";
+      } else if (status === 404) {
+        message =
+          apiMsg ||
+          "Pacientul nu are date medicale disponibile pentru rezumat.";
+      } else if (status === 503) {
+        message =
+          apiMsg ||
+          "Serviciul de rezumat AI este indisponibil momentan. Încearcă din nou mai târziu.";
+      } else {
+        message =
+          apiMsg ||
+          e.message ||
+          "A apărut o eroare la generarea rezumatului AI. Încearcă din nou.";
+      }
+      setAiSummaryError(message);
+      toast.error(message);
+    } finally {
+      setAiSummaryLoading(false);
+    }
+  };
+
   const tabItems = [
     { id: "overview", label: "Prezentare generală" },
     { id: "timeline", label: "Timeline" },
@@ -606,6 +658,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
       <Tabs tabs={tabItems} activeId={activeTab} onChange={setActiveTab} />
 
       {activeTab === "overview" && (
+        <div className="space-y-6">
         <Card>
           <CardHeader>
             <h2 className="text-xl font-semibold text-slate-900">
@@ -694,6 +747,87 @@ export const DoctorPatientDetailPage: React.FC = () => {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Rezumat AI
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Sinteză automată a datelor existente. Nu reprezintă un
+                  diagnostic sau o recomandare de tratament.
+                </p>
+              </div>
+              <Button
+                type="button"
+                loading={aiSummaryLoading}
+                onClick={handleGenerateAiSummary}
+              >
+                Generează rezumat AI
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {aiSummaryError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {aiSummaryError}
+              </div>
+            )}
+
+            {aiSummaryLoading && (
+              <p className="text-sm text-slate-500">
+                Se generează rezumatul, te rugăm să aștepți…
+              </p>
+            )}
+
+            {!aiSummaryLoading && !aiSummary && !aiSummaryError && (
+              <EmptyState
+                title="Niciun rezumat generat"
+                description="Apasă „Generează rezumat AI” pentru o sinteză a fișei medicale a pacientului."
+              />
+            )}
+
+            {!aiSummaryLoading && aiSummary && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-1 text-sm font-semibold text-slate-800">
+                    Sinteză
+                  </h3>
+                  <p className="whitespace-pre-line text-sm text-slate-700">
+                    {aiSummary.summaryText}
+                  </p>
+                </div>
+
+                {aiSummary.attentionPoints &&
+                  aiSummary.attentionPoints.length > 0 && (
+                    <div>
+                      <h3 className="mb-1 text-sm font-semibold text-slate-800">
+                        Puncte de atenție
+                      </h3>
+                      <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                        {aiSummary.attentionPoints.map((point, i) => (
+                          <li key={i}>{point}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                  {aiSummary.disclaimer}
+                </div>
+
+                <p className="text-xs text-slate-400">
+                  Generat la{" "}
+                  {new Date(aiSummary.generatedAtUtc).toLocaleString("ro-RO")} ·
+                  Model: {aiSummary.model}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        </div>
       )}
 
       {activeTab === "timeline" && (
