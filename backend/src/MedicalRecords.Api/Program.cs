@@ -13,6 +13,7 @@ using MedicalRecords.Api.Middleware;
 using MedicalRecords.Application.Common;
 using MedicalRecords.Application.Admin;
 using MedicalRecords.Application.AiSummary;
+using MedicalRecords.Application.Assistant;
 using MedicalRecords.Application.Auth;
 using MedicalRecords.Application.Audit;
 using MedicalRecords.Application.Consent;
@@ -25,6 +26,7 @@ using MedicalRecords.Application.Appointments;
 using MedicalRecords.Domain.Entities;
 using MedicalRecords.Infrastructure.Admin;
 using MedicalRecords.Infrastructure.AiSummary;
+using MedicalRecords.Infrastructure.Assistant;
 using MedicalRecords.Infrastructure.Auth;
 using MedicalRecords.Infrastructure.Audit;
 using MedicalRecords.Infrastructure.Consent;
@@ -106,6 +108,20 @@ builder.Services.AddRateLimiter(options =>
                 QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                 QueueLimit = 0
             }));
+
+    // Limitare pentru asistentul AI – apelurile OpenAI consumă tokeni.
+    options.AddPolicy("AssistantPolicy", context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.User?.Identity?.Name
+                         ?? context.Connection.RemoteIpAddress?.ToString()
+                         ?? "anonymous",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 15,
+                Window = TimeSpan.FromMinutes(1),
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
 });
 
 // Dependency Injection
@@ -128,6 +144,11 @@ builder.Services.Configure<AiSummaryOptions>(
     builder.Configuration.GetSection(AiSummaryOptions.SectionName));
 builder.Services.AddHttpClient<IAiCompletionClient, OpenAiCompletionClient>();
 builder.Services.AddScoped<IAiSummaryService, AiSummaryService>();
+
+// AI Patient Navigation Assistant – reutilizează clientul OpenAI de mai sus
+builder.Services.Configure<AssistantOptions>(
+    builder.Configuration.GetSection(AssistantOptions.SectionName));
+builder.Services.AddScoped<IAssistantService, AssistantService>();
 
 // ProblemDetails for consistent error responses (used by global exception handling)
 builder.Services.AddProblemDetails();
