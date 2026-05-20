@@ -140,9 +140,14 @@ public class ConsentService : IConsentService
 
         var normalized = query.Trim().ToLowerInvariant();
 
-        // Căutăm doar doctori aprobați, după nume complet sau email.
+        // Căutăm doar doctori aprobați, după nume complet sau email,
+        // și aducem și instituția medicală principală (dacă există).
         var doctors = await (from profile in _db.DoctorProfiles
                              join user in _userManager.Users on profile.UserId equals user.Id
+                             join di in _db.DoctorInstitutions on profile.Id equals di.DoctorProfileId into diGroup
+                             from di in diGroup.OrderByDescending(x => x.IsPrimaryInstitution).ThenBy(x => x.Id).Take(1).DefaultIfEmpty()
+                             join inst in _db.MedicalInstitutions on di.MedicalInstitutionId equals inst.Id into instGroup
+                             from inst in instGroup.DefaultIfEmpty()
                              where profile.ApprovalStatus == "Approved"
                                    && (
                                        (profile.FullName != null &&
@@ -156,7 +161,9 @@ public class ConsentService : IConsentService
                                  UserId = user.Id,
                                  FullName = profile.FullName,
                                  Email = user.Email,
-                                 LicenseNumber = profile.LicenseNumber
+                                 LicenseNumber = profile.LicenseNumber,
+                                 InstitutionName = inst != null ? inst.Name : null,
+                                 InstitutionCity = inst != null ? inst.City : null
                              })
                              .Take(10)
                              .ToListAsync();

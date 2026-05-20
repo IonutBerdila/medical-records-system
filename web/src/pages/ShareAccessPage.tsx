@@ -26,6 +26,13 @@ function formatRelative(date: Date): string {
   return date.toLocaleDateString('ro-RO');
 }
 
+const formatDateShortRo = (date: Date): string => {
+  const dd = String(date.getDate()).padStart(2, '0');
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const yyyy = date.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+};
+
 // Helpers pentru câmpul "Expiră la" (mască ZZ.LL.AAAA)
 const WEEK_DAYS_RO = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sa', 'Du'];
 
@@ -576,9 +583,12 @@ export const ShareAccessPage: React.FC = () => {
                           <div className="font-medium text-slate-900">
                             {d.doctorFullName ?? d.doctorUserId}
                           </div>
-                          <div className="text-xs text-slate-500 truncate">
-                            ID: {d.doctorUserId}
-                          </div>
+                          {(d as any).institutionName && (
+                            <div className="text-xs text-slate-500 truncate">
+                              {(d as any).institutionName}
+                              {(d as any).institutionCity ? ` · ${(d as any).institutionCity}` : ''}
+                            </div>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -789,7 +799,6 @@ export const ShareAccessPage: React.FC = () => {
                     <p className="text-xs text-slate-500 mt-0.5">
                       Fișă completă · {formatExpiry(a.expiresAtUtc)}
                     </p>
-                    <p className="text-xs font-mono text-slate-400 mt-1 truncate">{a.doctorUserId}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <Badge variant="success">Activ</Badge>
@@ -817,21 +826,42 @@ export const ShareAccessPage: React.FC = () => {
             <Badge variant="default">{expiredList.length} expirate</Badge>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {expiredList.map((a) => (
-              <Card key={a.id} className="p-4 opacity-80">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-900 truncate">
-                      {a.doctorFullName ?? a.doctorUserId}
-                    </p>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      Expirat {a.expiresAtUtc ? formatRelative(new Date(a.expiresAtUtc)) : '—'}
-                    </p>
+            {expiredList.map((a) => {
+              const grantedDate = new Date(a.grantedAtUtc);
+              const expiredDate = a.expiresAtUtc ? new Date(a.expiresAtUtc) : null;
+              const isExpired = !!expiredDate;
+              return (
+                <Card key={a.id} className="p-4 opacity-80">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="font-semibold text-slate-900 truncate">
+                        {a.doctorFullName ?? a.doctorUserId}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Acordat:{' '}
+                        <span className="font-medium">
+                          {formatDateShortRo(grantedDate)}
+                        </span>
+                      </p>
+                      {isExpired && expiredDate ? (
+                        <p className="text-xs text-slate-500">
+                          Expirat:{' '}
+                          <span className="font-medium">
+                            {formatDateShortRo(expiredDate)}
+                          </span>{' '}
+                          ({formatRelative(expiredDate)})
+                        </p>
+                      ) : (
+                        <p className="text-xs text-slate-500">
+                          <span className="font-medium">Revocat manual</span>
+                        </p>
+                      )}
+                    </div>
+                    <Badge variant="default">{isExpired ? 'Expirat' : 'Revocat'}</Badge>
                   </div>
-                  <Badge variant="default">Expirat</Badge>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         </div>
       )}

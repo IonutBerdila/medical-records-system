@@ -348,13 +348,6 @@ export const DoctorAppointmentsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-slate-900">Programările mele</h1>
-        <p className="text-sm text-slate-600">
-          Configurează-ți disponibilitatea și gestionează programările cu pacienții tăi.
-        </p>
-      </div>
-
       <Tabs
         tabs={[
           { id: 'availability', label: 'Disponibilitatea mea' },

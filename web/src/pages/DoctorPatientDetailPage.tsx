@@ -27,7 +27,14 @@ import type {
 } from "../app/prescriptions/types";
 import { getInitials } from "../app/utils/initials";
 
-const ENTRY_TYPES = ["Diagnosis", "Visit", "Note", "LabResult"];
+const ENTRY_TYPE_LABELS: Record<string, string> = {
+  Diagnosis: "Diagnostic",
+  Visit: "Vizită",
+  Note: "Notă",
+  LabResult: "Rezultat laborator",
+} as const;
+
+const ENTRY_TYPES = Object.keys(ENTRY_TYPE_LABELS);
 
 function formatTags(arr: string | string[] | undefined): string {
   if (!arr) return "—";
@@ -715,7 +722,7 @@ export const DoctorPatientDetailPage: React.FC = () => {
                   >
                     {ENTRY_TYPES.map((t) => (
                       <option key={t} value={t}>
-                        {t}
+                        {ENTRY_TYPE_LABELS[t] ?? t}
                       </option>
                     ))}
                   </select>
@@ -773,32 +780,36 @@ export const DoctorPatientDetailPage: React.FC = () => {
               <ul className="space-y-2">
                 {entries.map((e) => (
                   <Card key={e.id} className="p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="info">{e.type}</Badge>
-                      <span className="font-medium text-slate-900">
-                        {e.title}
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          {ENTRY_TYPE_LABELS[e.type] ?? e.type}
+                        </span>
+                        {(e.createdByDoctorFullName ||
+                          e.createdByInstitutionName) && (
+                          <p className="mt-1 text-xs text-slate-500">
+                            {[
+                              e.createdByDoctorFullName &&
+                                `Dr. ${e.createdByDoctorFullName}`,
+                              e.createdByInstitutionName,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </p>
+                        )}
+                        <h3 className="mt-1 font-medium text-slate-900">
+                          {e.title}
+                        </h3>
+                        {e.description && (
+                          <p className="mt-1 text-sm text-slate-600">
+                            {e.description}
+                          </p>
+                        )}
+                      </div>
                       <span className="text-xs text-slate-500">
-                        {new Date(e.createdAtUtc).toLocaleString("ro-RO")}
+                        {new Date(e.createdAtUtc).toLocaleDateString("ro-RO")}
                       </span>
                     </div>
-                    {(e.createdByDoctorFullName ||
-                      e.createdByInstitutionName) && (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {[
-                          e.createdByDoctorFullName &&
-                            `Dr. ${e.createdByDoctorFullName}`,
-                          e.createdByInstitutionName,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    )}
-                    {e.description && (
-                      <p className="mt-2 text-sm text-slate-600">
-                        {e.description}
-                      </p>
-                    )}
                   </Card>
                 ))}
               </ul>

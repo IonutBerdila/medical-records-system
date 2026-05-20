@@ -43,37 +43,6 @@ const doctorRecentEntries = [
   { title: 'Referire', patient: 'Pacient: James Wilson', status: 'Finalizat', statusVariant: 'success' as const, time: 'acum 5 ore' }
 ] as const;
 
-const quickCardsPatient = [
-  {
-    label: 'Fișa medicală',
-    description: 'Accesează istoricul medical',
-    path: '/record',
-    icon: IconDocument,
-    color: 'bg-teal-50 text-teal-600'
-  },
-  {
-    label: 'Prescripții',
-    description: 'Vezi medicamentele active',
-    path: '/prescriptions',
-    icon: IconPrescription,
-    color: 'bg-amber-50 text-amber-700'
-  },
-  {
-    label: 'Acces și partajare',
-    description: 'Gestionează accesul doctorilor',
-    path: '/share',
-    icon: IconShare,
-    color: 'bg-sky-50 text-sky-600'
-  },
-  {
-    label: 'Programări',
-    description: 'Planifică o vizită',
-    path: '/appointments',
-    icon: IconCalendar,
-    color: 'bg-indigo-50 text-indigo-600'
-  }
-] as const;
-
 const recentActivity = [
   {
     title: 'Dosar actualizat',
@@ -499,26 +468,6 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {quickCardsPatient.map((card) => (
-          <Card
-            key={card.label}
-            className="group cursor-pointer p-4 transition-colors hover:border-slate-300 hover:bg-slate-50"
-            onClick={() => navigate(card.path)}
-          >
-            <div className="flex flex-col gap-3">
-              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-lg text-base ${card.color}`}>
-                <card.icon className="h-6 w-6" />
-              </span>
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">{card.label}</h3>
-                <p className="mt-1 text-[15px] text-slate-600">{card.description}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between gap-2">

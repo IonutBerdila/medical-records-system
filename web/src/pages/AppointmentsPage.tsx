@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
@@ -59,6 +59,29 @@ interface AppointmentCreateRequest {
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
+const WEEK_DAYS_RO = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sa', 'Du'];
+
+const monthFormatterRo = new Intl.DateTimeFormat('ro-RO', { month: 'long', year: 'numeric' });
+
+const getMonthGridMondayFirst = (monthStart: Date): Date[] => {
+  const first = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+  const mondayIndex = (first.getDay() + 6) % 7;
+  const gridStart = new Date(first);
+  gridStart.setDate(first.getDate() - mondayIndex);
+  return Array.from({ length: 42 }, (_, idx) => {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + idx);
+    return d;
+  });
+};
+
+const areSameDay = (a: Date, b: Date): boolean =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+const startOfDay = (date: Date): Date => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+const isBeforeToday = (date: Date): boolean => startOfDay(date).getTime() < startOfDay(new Date()).getTime();
+
 export const AppointmentsPage: React.FC = () => {
   const [scope, setScope] = useState<Scope>('upcoming');
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
@@ -84,6 +107,16 @@ export const AppointmentsPage: React.FC = () => {
   const [notes, setNotes] = useState('');
 
   const [submitting, setSubmitting] = useState(false);
+
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateMonthCursor, setDateMonthCursor] = useState<Date>(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [dateSelectedDay, setDateSelectedDay] = useState<Date | null>(null);
+  const datePickerRef = useRef<HTMLDivElement | null>(null);
+
+  const monthDays = useMemo(() => getMonthGridMondayFirst(dateMonthCursor), [dateMonthCursor]);
 
   const currentScopeLabel = useMemo(() => {
     if (scope === 'upcoming') return 'Viitoare';
@@ -111,6 +144,18 @@ export const AppointmentsPage: React.FC = () => {
   useEffect(() => {
     void loadAppointments(scope);
   }, [scope]);
+
+  useEffect(() => {
+    if (!datePickerOpen) return;
+    const onDocumentClick = (ev: MouseEvent) => {
+      if (!datePickerRef.current) return;
+      if (!datePickerRef.current.contains(ev.target as Node)) {
+        setDatePickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocumentClick);
+    return () => document.removeEventListener('mousedown', onDocumentClick);
+  }, [datePickerOpen]);
 
   const openWizard = () => {
     setWizardOpen(true);
@@ -429,13 +474,99 @@ export const AppointmentsPage: React.FC = () => {
           <p className="text-sm text-slate-600">
             Selectează data în care dorești să ai consultația. Nu poți alege date din trecut.
           </p>
-          <Input
-            label="Dată"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            min={new Date().toISOString().slice(0, 10)}
-          />
+          <div className="space-y-2">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Dată</label>
+            <div className="relative" ref={datePickerRef}>
+              <button
+                type="button"
+                className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                onClick={() => {
+                  setDatePickerOpen((prev) => !prev);
+                  if (!date) {
+                    const now = new Date();
+                    setDateMonthCursor(new Date(now.getFullYear(), now.getMonth(), 1));
+                  } else {
+                    const current = new Date(date);
+                    if (!Number.isNaN(current.getTime())) {
+                      setDateMonthCursor(new Date(current.getFullYear(), current.getMonth(), 1));
+                      setDateSelectedDay(current);
+                    }
+                  }
+                }}
+              >
+                {date ? new Date(date).toLocaleDateString('ro-RO') : 'Selectează data'}
+              </button>
+
+              {datePickerOpen && (
+                <div className="absolute left-0 z-30 mt-2 w-full min-w-[320px] rounded-xl border border-slate-200 bg-white p-3 shadow-lg sm:w-[360px]">
+                  <div className="mb-3 flex items-center justify-between">
+                    <button
+                      type="button"
+                      className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100"
+                      onClick={() =>
+                        setDateMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+                      }
+                    >
+                      {'<'}
+                    </button>
+                    <p className="text-sm font-semibold capitalize text-slate-800">
+                      {monthFormatterRo.format(dateMonthCursor)}
+                    </p>
+                    <button
+                      type="button"
+                      className="rounded-md px-2 py-1 text-slate-600 hover:bg-slate-100"
+                      onClick={() =>
+                        setDateMonthCursor((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+                      }
+                    >
+                      {'>'}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500">
+                    {WEEK_DAYS_RO.map((label) => (
+                      <span key={label} className="py-1">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-1 grid grid-cols-7 gap-1 text-center text-sm">
+                    {monthDays.map((day) => {
+                      const inMonth = day.getMonth() === dateMonthCursor.getMonth();
+                      const isToday = areSameDay(day, new Date());
+                      const isSelected = !!dateSelectedDay && areSameDay(day, dateSelectedDay);
+                      const disabled = isBeforeToday(day);
+                      return (
+                        <button
+                          key={`${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`}
+                          type="button"
+                          disabled={disabled}
+                          className={[
+                            'h-8 rounded-lg transition-colors',
+                            disabled ? 'cursor-not-allowed text-slate-300' : 'hover:bg-slate-100',
+                            isSelected ? 'bg-teal-500 text-white hover:bg-teal-500' : '',
+                            !inMonth ? 'text-slate-400' : 'text-slate-700',
+                            isToday && !isSelected ? 'ring-1 ring-teal-300' : ''
+                          ].join(' ')}
+                          onClick={() => {
+                            const selected = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+                            setDateSelectedDay(selected);
+                            const yyyy = selected.getFullYear();
+                            const mm = String(selected.getMonth() + 1).padStart(2, '0');
+                            const dd = String(selected.getDate()).padStart(2, '0');
+                            setDate(`${yyyy}-${mm}-${dd}`);
+                            setDatePickerOpen(false);
+                          }}
+                        >
+                          {day.getDate()}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
           <div className="flex justify-between gap-2">
             <Button type="button" variant="secondary" onClick={() => setWizardStep(2)}>
               Înapoi

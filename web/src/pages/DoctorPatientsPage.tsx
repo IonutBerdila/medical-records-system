@@ -44,8 +44,7 @@ export const DoctorPatientsPage: React.FC = () => {
       : patients.filter(
           (p) =>
             (p.email?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-            (p.fullName?.toLowerCase().includes(search.toLowerCase()) ?? false) ||
-            p.patientUserId.toLowerCase().includes(search.toLowerCase())
+            (p.fullName?.toLowerCase().includes(search.toLowerCase()) ?? false)
         );
 
   const total = patients.length;
@@ -94,7 +93,7 @@ export const DoctorPatientsPage: React.FC = () => {
           <div className="flex flex-1 items-center gap-2">
             <input
               type="search"
-              placeholder="Caută după nume, ID, email..."
+              placeholder="Caută după nume sau email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="h-10 flex-1 max-w-md rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
@@ -128,7 +127,6 @@ export const DoctorPatientsPage: React.FC = () => {
             <Table>
               <TableHead>
                 <Th>Nume</Th>
-                <Th>ID Pacient</Th>
                 <Th>Ultima actualizare</Th>
                 <Th>Ultima vizită</Th>
                 <Th>Status</Th>
@@ -146,9 +144,6 @@ export const DoctorPatientsPage: React.FC = () => {
                           {p.fullName || p.email || p.patientUserId}
                         </span>
                       </div>
-                    </Td>
-                    <Td className="font-mono text-xs text-slate-600">
-                      {p.patientUserId.slice(0, 8)}…
                     </Td>
                     <Td className="text-slate-600">—</Td>
                     <Td className="text-slate-600">—</Td>

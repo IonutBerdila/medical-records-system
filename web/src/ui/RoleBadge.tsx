@@ -1,20 +1,23 @@
 import React from 'react';
-import { Badge } from './Badge';
-
-const roleVariant: Record<string, 'default' | 'success' | 'warning' | 'info'> = {
-  Patient: 'info',
-  Doctor: 'success',
-  Pharmacy: 'warning',
-  Admin: 'default'
-};
 
 interface RoleBadgeProps {
   role: string;
   className?: string;
 }
 
-export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) => (
-  <Badge variant={roleVariant[role] ?? 'default'} className={className}>
-    {role}
-  </Badge>
-);
+export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, className = '' }) => {
+  const label =
+    role === 'Patient'
+      ? 'PACIENT'
+      : role === 'Doctor'
+      ? 'DOCTOR'
+      : role === 'Pharmacy'
+      ? 'FARMACIE'
+      : role.toUpperCase();
+
+  return (
+    <span className={`text-xs font-semibold tracking-wide text-slate-700 ${className}`}>
+      {label}
+    </span>
+  );
+};

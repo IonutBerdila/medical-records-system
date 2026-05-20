@@ -12,6 +12,8 @@ export interface DoctorLookupDto {
   fullName?: string;
   email?: string;
   licenseNumber?: string;
+  institutionName?: string;
+  institutionCity?: string;
 }
 
 export interface GrantAccessRequest {
