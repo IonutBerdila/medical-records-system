@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "medicalRecord": "Dossier médical",
+    "history": "Historique",
+    "prescriptions": "Ordonnances",
+    "accessSharing": "Accès et partage",
+    "appointments": "Rendez-vous",
+    "assistant": "Assistant IA",
+    "myPatients": "Mes patients",
+    "analytics": "Analyses",
+    "userManagement": "Gestion des utilisateurs",
+    "approvals": "Approbations",
+    "auditLogs": "Journaux d'audit",
+    "reports": "Rapports",
+    "systemConfig": "Configuration du système",
+    "pharmacy": "Pharmacie"
+  },
+  "topbar": {
+    "welcome": "Bienvenue",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "notifications": "Notifications",
+    "logout": "Se déconnecter",
+    "language": "Langue"
+  },
+  "routeTitle": {
+    "profile": "Profil",
+    "prescription": "Ordonnance",
+    "patientDetails": "Détails du patient"
+  },
+  "routeSubtitle": {
+    "share": "Gérez l'accès à votre dossier médical",
+    "assistant": "Orientation générale et aiguillage vers le bon spécialiste",
+    "doctorPatients": "Gérez et consultez les dossiers des patients"
+  },
+  "common": {
+    "viewAll": "Voir tout",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "load": "Charger",
+    "error": "Erreur",
+    "back": "Retour",
+    "search": "Rechercher"
+  },
+  "dashboard": {
+    "recentActivity": "Activité récente",
+    "activePrescriptions": "Ordonnances actives",
+    "prescriptionsActiveBadge": "3 actives",
+    "accessGranted": "Accès accordé",
+    "addAccessGrant": "Ajouter une nouvelle autorisation d'accès",
+    "latestEntries": "Dernières entrées",
+    "editPrescription": "Modifier l'ordonnance",
+    "tableDate": "Date",
+    "tableType": "Type",
+    "tableProvider": "Fournisseur",
+    "tableStatus": "Statut"
+  }
+}

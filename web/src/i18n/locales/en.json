@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "medicalRecord": "Medical record",
+    "history": "History",
+    "prescriptions": "Prescriptions",
+    "accessSharing": "Access & sharing",
+    "appointments": "Appointments",
+    "assistant": "AI assistant",
+    "myPatients": "My patients",
+    "analytics": "Analytics",
+    "userManagement": "User management",
+    "approvals": "Approvals",
+    "auditLogs": "Audit logs",
+    "reports": "Reports",
+    "systemConfig": "System configuration",
+    "pharmacy": "Pharmacy"
+  },
+  "topbar": {
+    "welcome": "Welcome",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "notifications": "Notifications",
+    "logout": "Log out",
+    "language": "Language"
+  },
+  "routeTitle": {
+    "profile": "Profile",
+    "prescription": "Prescription",
+    "patientDetails": "Patient details"
+  },
+  "routeSubtitle": {
+    "share": "Manage access to your medical record",
+    "assistant": "General guidance and direction to the right specialist",
+    "doctorPatients": "Manage and view patient records"
+  },
+  "common": {
+    "viewAll": "View all",
+    "save": "Save",
+    "cancel": "Cancel",
+    "load": "Load",
+    "error": "Error",
+    "back": "Back",
+    "search": "Search"
+  },
+  "dashboard": {
+    "recentActivity": "Recent activity",
+    "activePrescriptions": "Active prescriptions",
+    "prescriptionsActiveBadge": "3 active",
+    "accessGranted": "Access granted",
+    "addAccessGrant": "Add a new access grant",
+    "latestEntries": "Latest entries",
+    "editPrescription": "Edit prescription",
+    "tableDate": "Date",
+    "tableType": "Type",
+    "tableProvider": "Provider",
+    "tableStatus": "Status"
+  }
+}

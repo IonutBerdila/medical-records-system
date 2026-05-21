@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "medicalRecord": "Fișa medicală",
+    "history": "Istoric",
+    "prescriptions": "Prescripții",
+    "accessSharing": "Acces și partajare",
+    "appointments": "Programări",
+    "assistant": "Asistent AI",
+    "myPatients": "Pacienții mei",
+    "analytics": "Analitica",
+    "userManagement": "Gestionare utilizatori",
+    "approvals": "Aprobări",
+    "auditLogs": "Jurnale audit",
+    "reports": "Rapoarte",
+    "systemConfig": "Configurare sistem",
+    "pharmacy": "Farmacie"
+  },
+  "topbar": {
+    "welcome": "Bun venit",
+    "openMenu": "Deschide meniul",
+    "closeMenu": "Închide meniul",
+    "notifications": "Notificări",
+    "logout": "Deconectare",
+    "language": "Limbă"
+  },
+  "routeTitle": {
+    "profile": "Profil",
+    "prescription": "Prescripție",
+    "patientDetails": "Detalii pacient"
+  },
+  "routeSubtitle": {
+    "share": "Gestionează accesul la fișa ta medicală",
+    "assistant": "Orientare generală și îndrumare către specialistul potrivit",
+    "doctorPatients": "Gestionează și vizualizează fișele pacienților"
+  },
+  "common": {
+    "viewAll": "Vezi toate",
+    "save": "Salvează",
+    "cancel": "Anulează",
+    "load": "Încarcă",
+    "error": "Eroare",
+    "back": "Înapoi",
+    "search": "Caută"
+  },
+  "dashboard": {
+    "recentActivity": "Activitate recentă",
+    "activePrescriptions": "Prescripții active",
+    "prescriptionsActiveBadge": "3 active",
+    "accessGranted": "Acces acordat",
+    "addAccessGrant": "Adaugă un nou grant de acces",
+    "latestEntries": "Ultimele înregistrări",
+    "editPrescription": "Editează prescripția",
+    "tableDate": "Data",
+    "tableType": "Tip",
+    "tableProvider": "Furnizor",
+    "tableStatus": "Status"
+  }
+}

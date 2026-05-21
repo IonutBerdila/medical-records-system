@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../app/auth/AuthContext';
 import { RoleBadge } from './RoleBadge';
+import { LanguageSelector } from './LanguageSelector';
 import {
   IconPulse,
   IconDashboard,
@@ -19,41 +21,42 @@ import {
   IconChat
 } from './Icons';
 
-const ROUTE_TITLES: Record<string, string> = {
-  '/me': 'Profil',
-  '/dashboard': 'Dashboard',
-  '/record': 'Fișa medicală',
-  '/timeline': 'Istoric',
-  '/appointments': 'Programări',
-  '/assistant': 'Asistent AI',
-  '/prescriptions': 'Prescripții',
-  '/share': 'Acces și partajare',
-  '/doctor/patients': 'Pacienții mei',
-  '/doctor/appointments': 'Programări',
-  '/doctor/analytics': 'Analitica',
-  '/admin/users': 'Gestionare utilizatori',
-  '/admin/approvals': 'Aprobări',
-  '/admin/audit': 'Jurnale audit',
-  '/admin/reports': 'Rapoarte',
-  '/admin/config': 'Configurare sistem',
-  '/pharmacy': 'Farmacie',
-  '/pharmacy/prescription': 'Prescripție'
+// Mapează fiecare rută la o cheie de traducere, rezolvată cu t() la randare.
+const ROUTE_TITLE_KEYS: Record<string, string> = {
+  '/me': 'routeTitle.profile',
+  '/dashboard': 'nav.dashboard',
+  '/record': 'nav.medicalRecord',
+  '/timeline': 'nav.history',
+  '/appointments': 'nav.appointments',
+  '/assistant': 'nav.assistant',
+  '/prescriptions': 'nav.prescriptions',
+  '/share': 'nav.accessSharing',
+  '/doctor/patients': 'nav.myPatients',
+  '/doctor/appointments': 'nav.appointments',
+  '/doctor/analytics': 'nav.analytics',
+  '/admin/users': 'nav.userManagement',
+  '/admin/approvals': 'nav.approvals',
+  '/admin/audit': 'nav.auditLogs',
+  '/admin/reports': 'nav.reports',
+  '/admin/config': 'nav.systemConfig',
+  '/pharmacy': 'nav.pharmacy',
+  '/pharmacy/prescription': 'routeTitle.prescription'
 };
 
-const ROUTE_SUBTITLES: Record<string, string> = {
-  '/share': 'Gestionează accesul la fișa ta medicală',
-  '/assistant': 'Orientare generală și îndrumare către specialistul potrivit',
-  '/doctor/patients': 'Gestionează și vizualizează fișele pacienților'
+const ROUTE_SUBTITLE_KEYS: Record<string, string> = {
+  '/share': 'routeSubtitle.share',
+  '/assistant': 'routeSubtitle.assistant',
+  '/doctor/patients': 'routeSubtitle.doctorPatients'
 };
 
-function getPageTitle(pathname: string): string {
-  if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname];
-  if (pathname.startsWith('/doctor/patients/')) return 'Detalii pacient';
-  return 'Dashboard';
+function getPageTitleKey(pathname: string): string {
+  if (ROUTE_TITLE_KEYS[pathname]) return ROUTE_TITLE_KEYS[pathname];
+  if (pathname.startsWith('/doctor/patients/')) return 'routeTitle.patientDetails';
+  return 'nav.dashboard';
 }
 
-function getPageSubtitle(pathname: string): string | undefined {
-  return ROUTE_SUBTITLES[pathname];
+function getPageSubtitleKey(pathname: string): string | undefined {
+  return ROUTE_SUBTITLE_KEYS[pathname];
 }
 
 interface NavItem {
@@ -73,41 +76,49 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const role = user?.roles[0];
-  const pageTitle = location.pathname === '/dashboard' ? 'Bun venit' : getPageTitle(location.pathname);
+  const pageTitle =
+    location.pathname === '/dashboard'
+      ? t('topbar.welcome')
+      : t(getPageTitleKey(location.pathname));
+  const subtitleKey =
+    location.pathname === '/dashboard' ? undefined : getPageSubtitleKey(location.pathname);
   const pageSubtitle =
     location.pathname === '/dashboard'
       ? `${user?.email ?? 'utilizator'}`
-      : getPageSubtitle(location.pathname);
+      : subtitleKey
+        ? t(subtitleKey)
+        : undefined;
   const isDashboard = location.pathname === '/dashboard';
 
   const pendingApprovals = (user as any)?.adminDashboardCounts?.pendingApprovalsTotal as number | undefined;
 
   const navItems: NavItem[] = [
-    { label: 'Dashboard', to: '/dashboard', roles: ['Patient', 'Doctor', 'Pharmacy', 'Admin'], icon: <IconDashboard /> },
-    { label: 'Fișa medicală', to: '/record', roles: ['Patient'], icon: <IconDocument /> },
-    { label: 'Istoric', to: '/timeline', roles: ['Patient'], icon: <IconClock /> },
-    { label: 'Prescripții', to: '/prescriptions', roles: ['Patient'], icon: <IconPrescription /> },
-    { label: 'Acces și partajare', to: '/share', roles: ['Patient'], icon: <IconShare /> },
-    { label: 'Programări', to: '/appointments', roles: ['Patient'], icon: <IconCalendar /> },
-    { label: 'Asistent AI', to: '/assistant', roles: ['Patient'], icon: <IconChat /> },
-    { label: 'Pacienții mei', to: '/doctor/patients', roles: ['Doctor'], icon: <IconUsers /> },
-    { label: 'Programări', to: '/doctor/appointments', roles: ['Doctor'], icon: <IconCalendar /> },
-    { label: 'Analitica', to: '/doctor/analytics', roles: ['Doctor'], icon: <IconAnalytics /> },
-    { label: 'Gestionare utilizatori', to: '/admin/users', roles: ['Admin'], icon: <IconUsers /> },
+    { label: t('nav.dashboard'), to: '/dashboard', roles: ['Patient', 'Doctor', 'Pharmacy', 'Admin'], icon: <IconDashboard /> },
+    { label: t('nav.medicalRecord'), to: '/record', roles: ['Patient'], icon: <IconDocument /> },
+    { label: t('nav.history'), to: '/timeline', roles: ['Patient'], icon: <IconClock /> },
+    { label: t('nav.prescriptions'), to: '/prescriptions', roles: ['Patient'], icon: <IconPrescription /> },
+    { label: t('nav.accessSharing'), to: '/share', roles: ['Patient'], icon: <IconShare /> },
+    { label: t('nav.appointments'), to: '/appointments', roles: ['Patient'], icon: <IconCalendar /> },
+    { label: t('nav.assistant'), to: '/assistant', roles: ['Patient'], icon: <IconChat /> },
+    { label: t('nav.myPatients'), to: '/doctor/patients', roles: ['Doctor'], icon: <IconUsers /> },
+    { label: t('nav.appointments'), to: '/doctor/appointments', roles: ['Doctor'], icon: <IconCalendar /> },
+    { label: t('nav.analytics'), to: '/doctor/analytics', roles: ['Doctor'], icon: <IconAnalytics /> },
+    { label: t('nav.userManagement'), to: '/admin/users', roles: ['Admin'], icon: <IconUsers /> },
     {
-      label: 'Aprobări',
+      label: t('nav.approvals'),
       to: '/admin/approvals',
       roles: ['Admin'],
       icon: <IconShield />,
       badge: pendingApprovals && pendingApprovals > 0 ? String(pendingApprovals) : undefined
     },
-    { label: 'Jurnale audit', to: '/admin/audit', roles: ['Admin'], icon: <IconSearch /> },
-    { label: 'Rapoarte', to: '/admin/reports', roles: ['Admin'], icon: <IconDocument /> },
-    { label: 'Configurare sistem', to: '/admin/config', roles: ['Admin'], icon: <IconSettings />, settings: true },
-    { label: 'Farmacie', to: '/pharmacy', roles: ['Pharmacy'], icon: <IconQr /> }
+    { label: t('nav.auditLogs'), to: '/admin/audit', roles: ['Admin'], icon: <IconSearch /> },
+    { label: t('nav.reports'), to: '/admin/reports', roles: ['Admin'], icon: <IconDocument /> },
+    { label: t('nav.systemConfig'), to: '/admin/config', roles: ['Admin'], icon: <IconSettings />, settings: true },
+    { label: t('nav.pharmacy'), to: '/pharmacy', roles: ['Pharmacy'], icon: <IconQr /> }
   ];
 
   const visibleNav = navItems
@@ -141,7 +152,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             type="button"
             onClick={closeSidebar}
             className="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white md:hidden"
-            aria-label="Inchide meniul"
+            aria-label={t('topbar.closeMenu')}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -213,7 +224,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               type="button"
               onClick={() => setSidebarOpen((o) => !o)}
               className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 md:hidden"
-              aria-label="Deschide meniul"
+              aria-label={t('topbar.openMenu')}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -227,10 +238,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             {user && (
               <>
+                <LanguageSelector />
                 <button
                   type="button"
                   className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                  aria-label="Notificari"
+                  aria-label={t('topbar.notifications')}
                 >
                   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <path
@@ -260,7 +272,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                     navigate('/login', { replace: true });
                   }}
                   className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-                  aria-label="Logout"
+                  aria-label={t('topbar.logout')}
                 >
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1z" />

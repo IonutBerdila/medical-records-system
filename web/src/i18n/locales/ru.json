@@ -1,0 +1,59 @@
+{
+  "nav": {
+    "dashboard": "Панель управления",
+    "medicalRecord": "Медицинская карта",
+    "history": "История",
+    "prescriptions": "Рецепты",
+    "accessSharing": "Доступ и обмен",
+    "appointments": "Записи на приём",
+    "assistant": "ИИ-ассистент",
+    "myPatients": "Мои пациенты",
+    "analytics": "Аналитика",
+    "userManagement": "Управление пользователями",
+    "approvals": "Подтверждения",
+    "auditLogs": "Журналы аудита",
+    "reports": "Отчёты",
+    "systemConfig": "Настройка системы",
+    "pharmacy": "Аптека"
+  },
+  "topbar": {
+    "welcome": "Добро пожаловать",
+    "openMenu": "Открыть меню",
+    "closeMenu": "Закрыть меню",
+    "notifications": "Уведомления",
+    "logout": "Выйти",
+    "language": "Язык"
+  },
+  "routeTitle": {
+    "profile": "Профиль",
+    "prescription": "Рецепт",
+    "patientDetails": "Данные пациента"
+  },
+  "routeSubtitle": {
+    "share": "Управление доступом к вашей медицинской карте",
+    "assistant": "Общие рекомендации и направление к нужному специалисту",
+    "doctorPatients": "Управление и просмотр карт пациентов"
+  },
+  "common": {
+    "viewAll": "Показать все",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "load": "Загрузить",
+    "error": "Ошибка",
+    "back": "Назад",
+    "search": "Поиск"
+  },
+  "dashboard": {
+    "recentActivity": "Недавняя активность",
+    "activePrescriptions": "Активные рецепты",
+    "prescriptionsActiveBadge": "3 активных",
+    "accessGranted": "Предоставленный доступ",
+    "addAccessGrant": "Добавить новое разрешение на доступ",
+    "latestEntries": "Последние записи",
+    "editPrescription": "Редактировать рецепт",
+    "tableDate": "Дата",
+    "tableType": "Тип",
+    "tableProvider": "Поставщик",
+    "tableStatus": "Статус"
+  }
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
 import { Badge } from '../ui/Badge';
 import { useAuth } from '../app/auth/AuthContext';
@@ -152,6 +153,7 @@ const adminAuditEvents = [
 export const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const role = (user?.roles[0] ?? 'Patient') as UserRole;
 
   const [adminData, setAdminData] = useState<AdminDashboardResponse | null>(null);
@@ -471,13 +473,13 @@ export const Dashboard: React.FC = () => {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)]">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="text-xl font-semibold text-slate-900">Activitate recenta</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{t('dashboard.recentActivity')}</h2>
             <button
               type="button"
               className="text-sm font-medium text-teal-600 hover:underline"
               onClick={() => navigate('/timeline')}
             >
-              Vezi toate
+              {t('common.viewAll')}
             </button>
           </div>
           <ul className="divide-y divide-slate-100">
@@ -499,9 +501,9 @@ export const Dashboard: React.FC = () => {
         <Card className="p-5">
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-                <h2 className="text-xl font-semibold text-slate-900">Prescripții active</h2>
+                <h2 className="text-xl font-semibold text-slate-900">{t('dashboard.activePrescriptions')}</h2>
               <Badge variant="success" className="mt-2">
-                3 active
+                {t('dashboard.prescriptionsActiveBadge')}
               </Badge>
             </div>
             <button
@@ -509,7 +511,7 @@ export const Dashboard: React.FC = () => {
               className="text-sm font-medium text-teal-600 hover:underline"
               onClick={() => navigate('/prescriptions')}
             >
-              Vezi toate
+              {t('common.viewAll')}
             </button>
           </div>
           <ul className="space-y-3">
@@ -526,7 +528,7 @@ export const Dashboard: React.FC = () => {
                 <button
                   type="button"
                   className="p-1 text-emerald-500 hover:text-emerald-600"
-                  aria-label="Editeaza prescriptia (UI doar)"
+                  aria-label={t('dashboard.editPrescription')}
                 >
                   <IconPrescription className="h-5 w-5" />
                 </button>
@@ -539,11 +541,11 @@ export const Dashboard: React.FC = () => {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.8fr)]">
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Acces acordat</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t('dashboard.accessGranted')}</h2>
             <button
               type="button"
               className="inline-flex h-8 items-center justify-center text-slate-500 hover:text-slate-700"
-              aria-label="Adauga un nou grant de acces"
+              aria-label={t('dashboard.addAccessGrant')}
             >
               <span className="text-2xl font-semibold leading-none">+</span>
             </button>
@@ -566,23 +568,23 @@ export const Dashboard: React.FC = () => {
 
         <Card className="p-5">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="text-lg font-semibold text-slate-900">Ultimele inregistrari</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t('dashboard.latestEntries')}</h2>
             <button
               type="button"
               className="text-sm font-medium text-teal-600 hover:underline"
               onClick={() => navigate('/timeline')}
             >
-              Vezi toate
+              {t('common.viewAll')}
             </button>
           </div>
           <div className="overflow-hidden rounded-xl border border-slate-200">
             <table className="min-w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Data</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Tip</th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">Furnizor</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">Status</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{t('dashboard.tableDate')}</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{t('dashboard.tableType')}</th>
+                  <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">{t('dashboard.tableProvider')}</th>
+                  <th className="px-4 py-2 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">{t('dashboard.tableStatus')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
