@@ -1,19 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
 import { getMyEntries } from '../app/entries/entriesApi';
 import type { MedicalEntryDto } from '../app/entries/types';
 
-const ENTRY_TYPE_LABELS: Record<string, string> = {
-  Diagnosis: 'Diagnostic',
-  Visit: 'Vizită',
-  Note: 'Notă',
-  LabResult: 'Rezultat laborator'
-};
-
-const ENTRY_TYPES = Object.keys(ENTRY_TYPE_LABELS);
+const ENTRY_TYPES = ['Diagnosis', 'Visit', 'Note', 'LabResult'];
 
 export const TimelinePage: React.FC = () => {
+  const { t } = useTranslation();
+  const entryTypeLabel = (type: string) => t(`timeline.entryType.${type}`, { defaultValue: type });
   const [entries, setEntries] = useState<MedicalEntryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('');
@@ -23,7 +19,7 @@ export const TimelinePage: React.FC = () => {
       .then(setEntries)
       .catch((err: any) => {
         const msg =
-          err?.response?.data?.message || err?.response?.data?.title || err?.message || 'Eroare la încărcare';
+          err?.response?.data?.message || err?.response?.data?.title || err?.message || t('timeline.errLoad');
         toast.error(msg);
       })
       .finally(() => setLoading(false));
@@ -43,25 +39,25 @@ export const TimelinePage: React.FC = () => {
 
   return (
       <div className="flex flex-col gap-5">
-        <h1 className="text-2xl font-semibold text-slate-900">Timeline medical</h1>
+        <h1 className="text-2xl font-semibold text-slate-900">{t('timeline.title')}</h1>
         <div className="flex items-center gap-2">
-          <label className="text-sm text-mutedText">Filtru tip:</label>
+          <label className="text-sm text-mutedText">{t('timeline.filterType')}</label>
           <select
             className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-primary"
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
           >
-            <option value="">Toate</option>
-            {ENTRY_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {ENTRY_TYPE_LABELS[t] ?? t}
+            <option value="">{t('timeline.all')}</option>
+            {ENTRY_TYPES.map((type) => (
+              <option key={type} value={type}>
+                {entryTypeLabel(type)}
               </option>
             ))}
           </select>
         </div>
         {filtered.length === 0 ? (
           <Card className="p-6 text-center text-sm text-mutedText">
-            Nu există încă intrări în timeline.
+            {t('timeline.empty')}
           </Card>
         ) : (
           <div className="flex flex-col gap-3">
@@ -70,11 +66,11 @@ export const TimelinePage: React.FC = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                      {ENTRY_TYPE_LABELS[e.type] ?? e.type}
+                      {entryTypeLabel(e.type)}
                     </span>
                     {(e.createdByDoctorFullName || e.createdByInstitutionName) && (
                       <p className="mt-1 text-xs text-slate-500">
-                        {[e.createdByDoctorFullName && `Dr. ${e.createdByDoctorFullName}`, e.createdByInstitutionName].filter(Boolean).join(' · ')}
+                        {[e.createdByDoctorFullName && `${t('timeline.doctorPrefix')} ${e.createdByDoctorFullName}`, e.createdByInstitutionName].filter(Boolean).join(' · ')}
                       </p>
                     )}
                     <h3 className="mt-1 font-medium text-slate-900">{e.title}</h3>

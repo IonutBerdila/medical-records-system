@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { Card } from '../ui/Card';
@@ -15,8 +17,8 @@ function formatDate(dateIso: string): string {
   return d.toLocaleDateString('ro-RO', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-function formatValidity(validUntilUtc?: string): string {
-  if (!validUntilUtc) return 'Fără expirare';
+function formatValidity(validUntilUtc: string | undefined, t: TFunction): string {
+  if (!validUntilUtc) return t('prescriptions.noExpiry');
   return formatDate(validUntilUtc);
 }
 
@@ -29,17 +31,23 @@ function formatDateForFilename(dateIso: string): string {
   return `${yyyy}${mm}${dd}`;
 }
 
-function normalizeStatus(status: string): string {
-  if (!status) return 'Necunoscut';
+/** Mapează statusul brut din backend la o cheie de traducere. */
+function statusTranslationKey(status: string): string | null {
   const s = status.toLowerCase();
-  if (s === 'active') return 'Activ';
-  if (s === 'activ') return 'Activ';
-  if (s === 'completed' || s === 'complete') return 'Complet';
-  if (s === 'draft' || s === 'pending') return 'În așteptare';
-  if (s === 'dispensed') return 'Eliberat';
-  if (s === 'expired') return 'Expirat';
-  if (s === 'finalized') return 'Finalizată';
-  if (s === 'cancelled' || s === 'canceled') return 'Anulată';
+  if (s === 'active' || s === 'activ') return 'active';
+  if (s === 'completed' || s === 'complete') return 'completed';
+  if (s === 'draft' || s === 'pending') return 'pending';
+  if (s === 'dispensed') return 'dispensed';
+  if (s === 'expired') return 'expired';
+  if (s === 'finalized') return 'finalized';
+  if (s === 'cancelled' || s === 'canceled') return 'cancelled';
+  return null;
+}
+
+function normalizeStatus(status: string, t: TFunction): string {
+  if (!status) return t('prescriptions.status.unknown');
+  const key = statusTranslationKey(status);
+  if (key) return t(`prescriptions.status.${key}`);
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
@@ -51,7 +59,11 @@ function medicationStatusColor(status: string): string {
   return 'text-slate-900';
 }
 
-async function downloadPrescriptionPdf(prescription: PrescriptionDto, element: HTMLElement): Promise<void> {
+async function downloadPrescriptionPdf(
+  prescription: PrescriptionDto,
+  element: HTMLElement,
+  errorMessage: string
+): Promise<void> {
   try {
     const canvas = await html2canvas(element, {
       scale: 2,
@@ -77,7 +89,7 @@ async function downloadPrescriptionPdf(prescription: PrescriptionDto, element: H
     pdf.save(filename);
   } catch (err) {
     console.error(err);
-    toast.error('Nu am putut genera PDF-ul prescripției.');
+    toast.error(errorMessage);
   }
 }
 
@@ -85,11 +97,12 @@ const MedicationItemRow: React.FC<{ item: PrescriptionItemDto; expanded: boolean
   item,
   expanded
 }) => {
+  const { t } = useTranslation();
   const metaParts: string[] = [];
   if (item.form) metaParts.push(item.form);
   if (item.frequency) metaParts.push(item.frequency);
-  if (item.durationDays) metaParts.push(`Durată: ${item.durationDays} zile`);
-  if (item.quantity) metaParts.push(`Cantitate: ${item.quantity}`);
+  if (item.durationDays) metaParts.push(t('prescriptions.duration', { days: item.durationDays }));
+  if (item.quantity) metaParts.push(t('prescriptions.quantity', { quantity: item.quantity }));
 
   return (
     <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
@@ -107,18 +120,18 @@ const MedicationItemRow: React.FC<{ item: PrescriptionItemDto; expanded: boolean
         </div>
         {item.status && (
           <span className={`text-xs font-medium ${medicationStatusColor(item.status)}`}>
-            {normalizeStatus(item.status)}
+            {normalizeStatus(item.status, t)}
           </span>
         )}
       </div>
       {expanded && item.instructions && (
         <p className="mt-1 text-xs text-slate-700">
-          <span className="font-medium text-slate-800">Instrucțiuni:</span> {item.instructions}
+          <span className="font-medium text-slate-800">{t('prescriptions.instructions')}</span> {item.instructions}
         </p>
       )}
       {expanded && item.warnings && (
         <p className="mt-1 text-xs text-red-700">
-          <span className="font-medium">Atenționări:</span> {item.warnings}
+          <span className="font-medium">{t('prescriptions.warnings')}</span> {item.warnings}
         </p>
       )}
     </div>
@@ -132,6 +145,7 @@ const PrescriptionCard: React.FC<{
   onDownloadPdf: () => void;
   hideActions?: boolean;
 }> = ({ prescription, expanded, onToggleDetails, onDownloadPdf, hideActions }) => {
+  const { t } = useTranslation();
   const doctorLabel = [prescription.doctorFullName && `Dr. ${prescription.doctorFullName}`, prescription.doctorInstitutionName]
     .filter(Boolean)
     .join(' · ');
@@ -144,7 +158,7 @@ const PrescriptionCard: React.FC<{
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-base font-semibold text-slate-900 md:text-lg">
-            {normalizeStatus(prescription.status)}{' '}
+            {normalizeStatus(prescription.status, t)}{' '}
             <span className="text-sm font-normal text-slate-500 md:text-base">
               · {formatDate(prescription.createdAtUtc)}
             </span>
@@ -158,7 +172,7 @@ const PrescriptionCard: React.FC<{
           <div className="flex items-start gap-2">
             <IconUsers className="mt-0.5 h-4 w-4 text-slate-400" />
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Doctor</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('prescriptions.doctor')}</p>
               <p>{doctorLabel}</p>
             </div>
           </div>
@@ -167,7 +181,7 @@ const PrescriptionCard: React.FC<{
           <div className="flex items-start gap-2">
             <IconDocument className="mt-0.5 h-4 w-4 text-slate-400" />
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Diagnostic</p>
+              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('prescriptions.diagnosis')}</p>
               <p>{prescription.diagnosis}</p>
             </div>
           </div>
@@ -175,8 +189,8 @@ const PrescriptionCard: React.FC<{
         <div className="flex items-start gap-2">
           <IconCalendar className="mt-0.5 h-4 w-4 text-slate-400" />
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Valabil până la</p>
-            <p>{formatValidity(prescription.validUntilUtc)}</p>
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('prescriptions.validUntil')}</p>
+            <p>{formatValidity(prescription.validUntilUtc, t)}</p>
           </div>
         </div>
       </div>
@@ -185,7 +199,7 @@ const PrescriptionCard: React.FC<{
       <div className="mt-4">
         <div className="flex items-center justify-between gap-2">
           <p className="text-sm font-semibold text-slate-800">
-            {(prescription.items?.length ?? 0) === 1 ? 'Preparat' : 'Preparate'}
+            {(prescription.items?.length ?? 0) === 1 ? t('prescriptions.preparation') : t('prescriptions.preparations')}
           </p>
         </div>
         {prescription.items?.length ? (
@@ -195,14 +209,14 @@ const PrescriptionCard: React.FC<{
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-xs text-slate-500">Nu există medicamente înregistrate pentru această prescripție.</p>
+          <p className="mt-2 text-xs text-slate-500">{t('prescriptions.noMedications')}</p>
         )}
       </div>
 
       {/* General notes */}
       {expanded && hasGeneralNotes && (
         <div className="mt-4 border-t border-slate-200 pt-3">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Note generale</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{t('prescriptions.generalNotes')}</p>
           <p className="mt-1 text-sm text-slate-700">{prescription.generalNotes}</p>
         </div>
       )}
@@ -212,7 +226,7 @@ const PrescriptionCard: React.FC<{
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3">
           {expanded && (
             <p className="text-xs text-slate-500">
-              Ultima actualizare: {formatDate(prescription.createdAtUtc)}
+              {t('prescriptions.lastUpdate', { date: formatDate(prescription.createdAtUtc) })}
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -221,14 +235,14 @@ const PrescriptionCard: React.FC<{
               variant="secondary"
               onClick={onToggleDetails}
             >
-              {expanded ? 'Ascunde detalii' : 'Vezi detalii'}
+              {expanded ? t('prescriptions.hideDetails') : t('prescriptions.viewDetails')}
             </Button>
             <Button
               type="button"
               variant="secondary"
               onClick={onDownloadPdf}
             >
-              Descarcă PDF
+              {t('prescriptions.downloadPdf')}
             </Button>
           </div>
         </div>
@@ -238,6 +252,7 @@ const PrescriptionCard: React.FC<{
 };
 
 export const PrescriptionsPage: React.FC = () => {
+  const { t } = useTranslation();
   const [list, setList] = useState<PrescriptionDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -250,11 +265,11 @@ export const PrescriptionsPage: React.FC = () => {
       `[data-prescription-print-id="${prescriptionId}"]`
     );
     if (!container) {
-      toast.error('Nu am găsit conținutul prescripției pentru export.');
+      toast.error(t('prescriptions.errPdfContent'));
       return;
     }
 
-    await downloadPrescriptionPdf(prescription, container);
+    await downloadPrescriptionPdf(prescription, container, t('prescriptions.errPdf'));
   };
 
   useEffect(() => {
@@ -266,7 +281,7 @@ export const PrescriptionsPage: React.FC = () => {
             ?.message ||
           (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
           (err as { message?: string })?.message ||
-          'Eroare la încărcare';
+          t('prescriptions.errLoad');
         toast.error(msg);
       })
       .finally(() => setLoading(false));
@@ -283,8 +298,8 @@ export const PrescriptionsPage: React.FC = () => {
   if (list.length === 0) {
     return (
       <EmptyState
-        title="Nu există prescripții disponibile."
-        description="Prescripțiile emise de medicii tăi vor apărea aici."
+        title={t('prescriptions.emptyTitle')}
+        description={t('prescriptions.emptyDescription')}
         icon={<IconDocumentEmpty />}
       />
     );

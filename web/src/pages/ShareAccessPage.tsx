@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -85,6 +86,7 @@ const formatMmSs = (totalSec: number): string => {
 };
 
 export const ShareAccessPage: React.FC = () => {
+  const { t } = useTranslation();
   const [list, setList] = useState<AccessDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [granting, setGranting] = useState(false);
@@ -137,7 +139,7 @@ export const ShareAccessPage: React.FC = () => {
             ?.message ||
           (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
           (err as { message?: string })?.message ||
-          'Eroare la încărcare';
+          t('sharing.errLoad');
         toast.error(msg);
       })
       .finally(() => setLoading(false));
@@ -183,7 +185,7 @@ export const ShareAccessPage: React.FC = () => {
     const selected = new Date(expiresAt);
     if (Number.isNaN(selected.getTime())) return;
     if (selected.getTime() < Date.now()) {
-      setExpiryValidationError('Data si ora trebuie sa fie in viitor.');
+      setExpiryValidationError(t('sharing.mustBeFuture'));
     } else {
       setExpiryValidationError(null);
     }
@@ -245,16 +247,16 @@ export const ShareAccessPage: React.FC = () => {
     if (value.includes('@')) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(value)) {
-        setDoctorValidationError('Email invalid. Verifică adresa introdusă.');
+        setDoctorValidationError(t('sharing.errEmailInvalid'));
         setDoctorValidationInfo(null);
       } else {
         setDoctorValidationError(null);
-        setDoctorValidationInfo('Email valid. Doctorul va fi verificat la trimiterea acordului.');
+        setDoctorValidationInfo(t('sharing.infoEmailValid'));
       }
     } else {
       // Nume liber fără selectare explicită
       setDoctorValidationError(null);
-      setDoctorValidationInfo('Introdu un nume complet sau un email valid, sau selectează din listă.');
+      setDoctorValidationInfo(t('sharing.infoEnterNameEmail'));
     }
   };
 
@@ -302,7 +304,7 @@ export const ShareAccessPage: React.FC = () => {
 
   const handleConfirmExpiry = () => {
     if (!expiryPreview || expiryPreview.getTime() < Date.now()) {
-      setExpiryValidationError('Data si ora trebuie sa fie in viitor.');
+      setExpiryValidationError(t('sharing.mustBeFuture'));
       return;
     }
     setExpiryFromParts(expirySelectedDay!, expiryHour, expiryMinute);
@@ -339,7 +341,7 @@ export const ShareAccessPage: React.FC = () => {
       setTokenCopied(true);
       window.setTimeout(() => setTokenCopied(false), 2000);
     } catch {
-      setTokenCopyError('Nu am putut copia. Selectează manual.');
+      setTokenCopyError(t('sharing.errCopyFailed'));
     }
   };
 
@@ -347,13 +349,13 @@ export const ShareAccessPage: React.FC = () => {
     e.preventDefault();
     const raw = doctorInput.trim();
     if (!raw && !selectedDoctor) {
-      toast.error('Introdu numele sau emailul doctorului.');
+      toast.error(t('sharing.errEnterDoctor'));
       return;
     }
 
     const emailValue = !selectedDoctor && raw.includes('@') ? raw : undefined;
     if (!selectedDoctor && !emailValue) {
-      toast.error('Selectează un doctor din listă sau introdu un email valid.');
+      toast.error(t('sharing.errSelectDoctor'));
       return;
     }
 
@@ -365,7 +367,7 @@ export const ShareAccessPage: React.FC = () => {
         expiresAtUtc: expiresAt || undefined
       };
       await grantAccess(body);
-      toast.success('Acces acordat.');
+      toast.success(t('sharing.toastAccessGranted'));
       setDoctorInput('');
       setSelectedDoctor(null);
       setDoctorValidationError(null);
@@ -382,7 +384,7 @@ export const ShareAccessPage: React.FC = () => {
           ?.message ||
         (err as { response?: { data?: { title?: string } } })?.response?.data?.title ||
         (err as { message?: string })?.message ||
-        'Eroare la acordare acces';
+        t('sharing.errGrant');
       toast.error(msg);
     } finally {
       setGranting(false);
@@ -403,12 +405,12 @@ export const ShareAccessPage: React.FC = () => {
       const result = await createShareToken({ expiresInMinutes });
       setShareTokenResult(result);
       setTokenCreatedAtMs(Date.now());
-      toast.success('Token generat. Copiază-l acum — se afișează o singură dată.');
+      toast.success(t('sharing.toastTokenGenerated'));
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ||
         (err as { message?: string })?.message ||
-        'Eroare la generare token';
+        t('sharing.errToken');
       toast.error(msg);
     } finally {
       setShareTokenLoading(false);
@@ -418,23 +420,23 @@ export const ShareAccessPage: React.FC = () => {
   const handleRevoke = async (accessId: string) => {
     try {
       await revokeAccess(accessId);
-      toast.success('Acces revocat.');
+      toast.success(t('sharing.toastAccessRevoked'));
       load();
     } catch (err: any) {
       const status = err?.response?.status as number | undefined;
       if (status === 404) {
-        toast.error('Acordul nu a fost găsit.');
+        toast.error(t('sharing.errConsentNotFound'));
         return;
       }
       if (status === 403) {
-        toast.error('Nu ai drepturi pentru această acțiune.');
+        toast.error(t('sharing.errNoPermission'));
         return;
       }
       const msg =
         err?.response?.data?.message ||
         err?.response?.data?.title ||
         err?.message ||
-        'Eroare la revocare';
+        t('sharing.errRevoke');
       toast.error(msg);
     }
   };
@@ -454,15 +456,13 @@ export const ShareAccessPage: React.FC = () => {
     <div className="space-y-8">
       {/* Acord pentru farmacie */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold text-slate-900">Acord pentru farmacie</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Generează un token temporar farmaciei pentru a vedea prescripțiile. Tokenul se afișează o singură dată.
-        </p>
+        <h2 className="text-xl font-semibold text-slate-900">{t('sharing.pharmacyConsentTitle')}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t('sharing.pharmacyConsentDesc')}</p>
         {!shareTokenResult ? (
           <form className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={handleCreateShareToken}>
             <div className="w-24">
               <Input
-                label="Valabil (min)"
+                label={t('sharing.validMinutes')}
                 type="text"
                 min={1}
                 max={60}
@@ -476,17 +476,17 @@ export const ShareAccessPage: React.FC = () => {
               />
             </div>
             <Button type="submit" loading={shareTokenLoading} className="shrink-0">
-              Generează token
+              {t('sharing.generateToken')}
             </Button>
           </form>
         ) : (
           <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Token generat</p>
-                <p className="mt-0.5 text-xs text-slate-600">Se afișează o singură dată. Copiază-l acum.</p>
+                <p className="text-sm font-semibold text-slate-900">{t('sharing.tokenGenerated')}</p>
+                <p className="mt-0.5 text-xs text-slate-600">{t('sharing.tokenOnce')}</p>
               </div>
-              {tokenExpired && <Badge variant="default">Expirat</Badge>}
+              {tokenExpired && <Badge variant="default">{t('sharing.expired')}</Badge>}
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -494,7 +494,7 @@ export const ShareAccessPage: React.FC = () => {
                 ref={tokenCodeRef}
                 onClick={handleTokenSelect}
                 className="cursor-text select-text break-all rounded-lg bg-slate-900 px-3 py-2 text-sm text-white font-mono"
-                title="Click pentru selectare"
+                title={t('sharing.clickToSelect')}
               >
                 {shareTokenResult.token}
               </code>
@@ -505,15 +505,15 @@ export const ShareAccessPage: React.FC = () => {
                 onClick={handleCopyToken}
                 disabled={tokenExpired}
               >
-                {tokenCopied ? 'Copiat' : 'Copiază'}
+                {tokenCopied ? t('sharing.copied') : t('sharing.copy')}
               </Button>
             </div>
             {tokenCopyError && <p className="mt-1 text-xs text-red-600">{tokenCopyError}</p>}
-            {tokenCopied && !tokenCopyError && <p className="mt-1 text-xs text-teal-700">Token copiat.</p>}
+            {tokenCopied && !tokenCopyError && <p className="mt-1 text-xs text-teal-700">{t('sharing.tokenCopied')}</p>}
 
             <div className="mt-3">
               <p className="text-sm font-medium text-slate-800">
-                {tokenExpired ? 'Expirat' : `Expiră în ${formatMmSs(tokenRemainingSec)}`}
+                {tokenExpired ? t('sharing.expired') : `${t('sharing.expiresIn')} ${formatMmSs(tokenRemainingSec)}`}
               </p>
               <div className="mt-2 h-2 overflow-hidden rounded bg-slate-100">
                 <div
@@ -528,17 +528,15 @@ export const ShareAccessPage: React.FC = () => {
 
       {/* Acord pentru doctor */}
       <Card className="p-6">
-        <h2 className="text-xl font-semibold text-slate-900">Acord pentru doctor</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Generează acces securizat pentru un doctor la fișa ta medicală.
-        </p>
+        <h2 className="text-xl font-semibold text-slate-900">{t('sharing.doctorConsentTitle')}</h2>
+        <p className="mt-1 text-sm text-slate-600">{t('sharing.doctorConsentDesc')}</p>
         <form className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:gap-4" onSubmit={handleGrant}>
           <div className="flex-1">
             <div className="relative">
               <Input
-                label="Doctor"
+                label={t('sharing.doctorLabel')}
                 type="text"
-                placeholder="Caută după nume sau email"
+                placeholder={t('sharing.doctorSearchPlaceholder')}
                 autoComplete="off"
                 value={doctorInput}
                 onChange={(e) => {
@@ -561,9 +559,9 @@ export const ShareAccessPage: React.FC = () => {
               {doctorDropdownOpen && doctorInput.trim() && (
                 <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg">
                   {doctorSearchLoading ? (
-                    <div className="px-3 py-2 text-xs text-slate-500">Se caută...</div>
+                    <div className="px-3 py-2 text-xs text-slate-500">{t('sharing.searching')}</div>
                   ) : doctorSuggestions.length === 0 ? (
-                    <div className="px-3 py-2 text-xs text-slate-500">Niciun doctor găsit</div>
+                    <div className="px-3 py-2 text-xs text-slate-500">{t('sharing.noDoctorFound')}</div>
                   ) : (
                     <ul className="max-h-64 overflow-y-auto py-1 text-sm">
                       {doctorSuggestions.map((d) => (
@@ -600,9 +598,9 @@ export const ShareAccessPage: React.FC = () => {
           <div className="flex-1">
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-slate-700">Expira la (optional)</label>
+                <label className="text-sm font-medium text-slate-700">{t('sharing.expiryLabel')}</label>
                 <label className="inline-flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-                  <span>Seteaza expirare</span>
+                  <span>{t('sharing.setExpiry')}</span>
                   <input
                     type="checkbox"
                     className="peer sr-only"
@@ -615,7 +613,7 @@ export const ShareAccessPage: React.FC = () => {
 
               {!expiryEnabled ? (
                 <p className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                  Nu expira
+                  {t('sharing.noExpiry')}
                 </p>
               ) : (
                 <div className="relative" ref={expiryPickerRef}>
@@ -624,7 +622,7 @@ export const ShareAccessPage: React.FC = () => {
                     className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-left text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-slate-300 focus:border-primary focus:ring-2 focus:ring-primary/20"
                     onClick={() => setExpiryPickerOpen((prev) => !prev)}
                   >
-                    {expiresAt ? formatDateTimeRo(new Date(expiresAt)) : 'Selecteaza data si ora'}
+                    {expiresAt ? formatDateTimeRo(new Date(expiresAt)) : t('sharing.selectDateTime')}
                   </button>
 
                   {expiryPickerOpen && (
@@ -688,7 +686,7 @@ export const ShareAccessPage: React.FC = () => {
 
                       <div className="mt-3 grid grid-cols-2 gap-2">
                         <div>
-                          <label className="mb-1 block text-xs text-slate-600">Ora</label>
+                          <label className="mb-1 block text-xs text-slate-600">{t('sharing.hour')}</label>
                           <select
                             className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             value={expiryHour}
@@ -702,7 +700,7 @@ export const ShareAccessPage: React.FC = () => {
                           </select>
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs text-slate-600">Minute</label>
+                          <label className="mb-1 block text-xs text-slate-600">{t('sharing.minute')}</label>
                           <select
                             className="h-10 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm text-slate-700 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                             value={expiryMinute}
@@ -718,18 +716,18 @@ export const ShareAccessPage: React.FC = () => {
                       </div>
 
                       <div className="mt-3 flex flex-wrap gap-2">
-                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('1h')}>+1 ora</button>
-                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('24h')}>+24h</button>
-                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('7d')}>+7 zile</button>
-                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('30d')}>+30 zile</button>
-                        <button type="button" className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-sm text-teal-700 hover:bg-teal-100" onClick={() => applyPreset('none')}>Fara expirare</button>
+                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('1h')}>{t('sharing.preset1h')}</button>
+                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('24h')}>{t('sharing.preset24h')}</button>
+                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('7d')}>{t('sharing.preset7d')}</button>
+                        <button type="button" className="rounded-full border border-slate-200 px-3 py-1 text-sm text-slate-700 hover:bg-slate-50" onClick={() => applyPreset('30d')}>{t('sharing.preset30d')}</button>
+                        <button type="button" className="rounded-full border border-teal-200 bg-teal-50 px-3 py-1 text-sm text-teal-700 hover:bg-teal-100" onClick={() => applyPreset('none')}>{t('sharing.presetNone')}</button>
                       </div>
 
                       {expiryValidationError && (
                         <p className="mt-2 text-xs text-red-600">{expiryValidationError}</p>
                       )}
                       {!expiryValidationError && expiryPreview && !isExpiryPreviewValid && (
-                        <p className="mt-2 text-xs text-red-600">Data si ora trebuie sa fie in viitor.</p>
+                        <p className="mt-2 text-xs text-red-600">{t('sharing.mustBeFuture')}</p>
                       )}
 
                       <div className="mt-3 flex items-center justify-between">
@@ -738,7 +736,7 @@ export const ShareAccessPage: React.FC = () => {
                           className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
                           onClick={() => setExpiryEnabled(false)}
                         >
-                          Sterge
+                          {t('sharing.clear')}
                         </button>
                         <button
                           type="button"
@@ -746,7 +744,7 @@ export const ShareAccessPage: React.FC = () => {
                           disabled={!isExpiryPreviewValid}
                           onClick={handleConfirmExpiry}
                         >
-                          Confirma
+                          {t('sharing.confirm')}
                         </button>
                       </div>
                     </div>
@@ -756,12 +754,12 @@ export const ShareAccessPage: React.FC = () => {
             </div>
           </div>
           <Button type="submit" loading={granting} className="shrink-0">
-            + Acord nou
+            {t('sharing.newConsent')}
           </Button>
         </form>
         {selectedDoctor && (
           <p className="mt-2 text-xs text-slate-600">
-            Doctor selectat:{' '}
+            {t('sharing.doctorSelected')}{' '}
             <span className="font-medium">
               {selectedDoctor.doctorFullName ?? selectedDoctor.doctorUserId}
             </span>
@@ -778,14 +776,14 @@ export const ShareAccessPage: React.FC = () => {
       {/* Active Grants */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <h2 className="text-xl font-semibold text-slate-900">Acorduri active</h2>
+          <h2 className="text-xl font-semibold text-slate-900">{t('sharing.activeConsents')}</h2>
           {activeList.length > 0 && (
-            <Badge variant="success">{activeList.length} active</Badge>
+            <Badge variant="success">{activeList.length} {t('sharing.activeWord')}</Badge>
           )}
         </div>
         {activeList.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-sm text-slate-600">Niciun acord activ. Creează unul folosind formularul de mai sus.</p>
+            <p className="text-sm text-slate-600">{t('sharing.noActiveConsents')}</p>
           </Card>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -797,18 +795,18 @@ export const ShareAccessPage: React.FC = () => {
                       {a.doctorFullName ?? a.doctorUserId}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Fișă completă · {formatExpiry(a.expiresAtUtc)}
+                      {t('sharing.fullRecord')} · {formatExpiry(a.expiresAtUtc)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="success">Activ</Badge>
+                    <Badge variant="success">{t('sharing.active')}</Badge>
                     <Button
                       type="button"
                       variant="ghost"
                       className="h-8 px-3 text-xs"
                       onClick={() => handleRevoke(a.id)}
                     >
-                      Revocă
+                      {t('sharing.revoke')}
                     </Button>
                   </div>
                 </div>
@@ -822,8 +820,8 @@ export const ShareAccessPage: React.FC = () => {
       {expiredList.length > 0 && (
         <div>
           <div className="flex items-center gap-2 mb-3">
-            <h2 className="text-xl font-semibold text-slate-900">Acorduri expirate</h2>
-            <Badge variant="default">{expiredList.length} expirate</Badge>
+            <h2 className="text-xl font-semibold text-slate-900">{t('sharing.expiredConsents')}</h2>
+            <Badge variant="default">{expiredList.length} {t('sharing.expiredWord')}</Badge>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {expiredList.map((a) => {
@@ -838,14 +836,14 @@ export const ShareAccessPage: React.FC = () => {
                         {a.doctorFullName ?? a.doctorUserId}
                       </p>
                       <p className="text-xs text-slate-500">
-                        Acordat:{' '}
+                        {t('sharing.granted')}{' '}
                         <span className="font-medium">
                           {formatDateShortRo(grantedDate)}
                         </span>
                       </p>
                       {isExpired && expiredDate ? (
                         <p className="text-xs text-slate-500">
-                          Expirat:{' '}
+                          {t('sharing.expiredAt')}{' '}
                           <span className="font-medium">
                             {formatDateShortRo(expiredDate)}
                           </span>{' '}
@@ -853,11 +851,11 @@ export const ShareAccessPage: React.FC = () => {
                         </p>
                       ) : (
                         <p className="text-xs text-slate-500">
-                          <span className="font-medium">Revocat manual</span>
+                          <span className="font-medium">{t('sharing.revokedManually')}</span>
                         </p>
                       )}
                     </div>
-                    <Badge variant="default">{isExpired ? 'Expirat' : 'Revocat'}</Badge>
+                    <Badge variant="default">{isExpired ? t('sharing.expired') : t('sharing.revoked')}</Badge>
                   </div>
                 </Card>
               );

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Tabs } from '../ui/Tabs';
@@ -59,9 +60,13 @@ interface AppointmentCreateRequest {
 
 type WizardStep = 1 | 2 | 3 | 4 | 5 | 6;
 
-const WEEK_DAYS_RO = ['Lu', 'Ma', 'Mi', 'Jo', 'Vi', 'Sa', 'Du'];
-
-const monthFormatterRo = new Intl.DateTimeFormat('ro-RO', { month: 'long', year: 'numeric' });
+/** Mapează limba interfeței la un locale pentru formatarea datelor. */
+const localeForLang = (lang: string): string => {
+  if (lang.startsWith('en')) return 'en-GB';
+  if (lang.startsWith('fr')) return 'fr-FR';
+  if (lang.startsWith('ru')) return 'ru-RU';
+  return 'ro-RO';
+};
 
 const getMonthGridMondayFirst = (monthStart: Date): Date[] => {
   const first = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
@@ -83,6 +88,7 @@ const startOfDay = (date: Date): Date => new Date(date.getFullYear(), date.getMo
 const isBeforeToday = (date: Date): boolean => startOfDay(date).getTime() < startOfDay(new Date()).getTime();
 
 export const AppointmentsPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const [scope, setScope] = useState<Scope>('upcoming');
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -118,13 +124,12 @@ export const AppointmentsPage: React.FC = () => {
 
   const monthDays = useMemo(() => getMonthGridMondayFirst(dateMonthCursor), [dateMonthCursor]);
 
-  const currentScopeLabel = useMemo(() => {
-    if (scope === 'upcoming') return 'Viitoare';
-    if (scope === 'history') return 'Istoric';
-    if (scope === 'cancelled') return 'Anulate';
-    if (scope === 'today') return 'Azi';
-    return '';
-  }, [scope]);
+  /** Etichetele zilelor săptămânii și formatatorul de lună, dependente de limbă. */
+  const weekDays = t('appointments.weekDays', { returnObjects: true }) as unknown as string[];
+  const monthFormatter = useMemo(
+    () => new Intl.DateTimeFormat(localeForLang(i18n.language), { month: 'long', year: 'numeric' }),
+    [i18n.language]
+  );
 
   const loadAppointments = async (currentScope: Scope) => {
     setLoadingList(true);
@@ -134,7 +139,7 @@ export const AppointmentsPage: React.FC = () => {
       const { data } = await http.get<PatientAppointment[]>(`/api/appointments/my?${params.toString()}`);
       setAppointments(data);
     } catch (err: any) {
-      const msg = err?.normalizedMessage || err?.message || 'Nu am putut încărca programările.';
+      const msg = err?.normalizedMessage || err?.message || t('appointments.errLoad');
       toast.error(msg);
     } finally {
       setLoadingList(false);
@@ -173,7 +178,7 @@ export const AppointmentsPage: React.FC = () => {
       const data = await fetchSpecialties();
       setSpecialties(data);
     } catch (err: any) {
-      const msg = err?.normalizedMessage || err?.message || 'Nu am putut încărca specialitățile.';
+      const msg = err?.normalizedMessage || err?.message || t('appointments.errSpecialties');
       toast.error(msg);
     } finally {
       setSpecialtiesLoading(false);
@@ -182,7 +187,7 @@ export const AppointmentsPage: React.FC = () => {
 
   const handleNextFromStep1 = async () => {
     if (!specialtyId) {
-      toast.error('Selectează o specialitate.');
+      toast.error(t('appointments.valSpecialty'));
       return;
     }
     setWizardStep(2);
@@ -194,7 +199,7 @@ export const AppointmentsPage: React.FC = () => {
       const { data } = await http.get<DoctorSearchResult[]>(`/api/appointments/doctors/search?${params.toString()}`);
       setDoctors(data);
     } catch (err: any) {
-      const msg = err?.normalizedMessage || err?.message || 'Nu am putut încărca doctorii.';
+      const msg = err?.normalizedMessage || err?.message || t('appointments.errDoctors');
       toast.error(msg);
     } finally {
       setDoctorsLoading(false);
@@ -203,7 +208,7 @@ export const AppointmentsPage: React.FC = () => {
 
   const handleNextFromStep2 = () => {
     if (!selectedDoctorInstitutionId) {
-      toast.error('Selectează un doctor.');
+      toast.error(t('appointments.valDoctor'));
       return;
     }
     setWizardStep(3);
@@ -211,11 +216,11 @@ export const AppointmentsPage: React.FC = () => {
 
   const handleNextFromStep3 = async () => {
     if (!date) {
-      toast.error('Selectează o dată.');
+      toast.error(t('appointments.valDate'));
       return;
     }
     if (!selectedDoctorInstitutionId) {
-      toast.error('Selectează un doctor.');
+      toast.error(t('appointments.valDoctor'));
       return;
     }
     setWizardStep(4);
@@ -228,7 +233,7 @@ export const AppointmentsPage: React.FC = () => {
       const { data } = await http.get<AvailableSlot[]>(`/api/appointments/available-slots?${params.toString()}`);
       setSlots(data);
     } catch (err: any) {
-      const msg = err?.normalizedMessage || err?.message || 'Nu am putut încărca sloturile disponibile.';
+      const msg = err?.normalizedMessage || err?.message || t('appointments.errSlots');
       toast.error(msg);
     } finally {
       setSlotsLoading(false);
@@ -237,7 +242,7 @@ export const AppointmentsPage: React.FC = () => {
 
   const handleNextFromStep4 = () => {
     if (!selectedSlot) {
-      toast.error('Selectează un interval orar.');
+      toast.error(t('appointments.valSlot'));
       return;
     }
     setWizardStep(5);
@@ -245,7 +250,7 @@ export const AppointmentsPage: React.FC = () => {
 
   const handleNextFromStep5 = () => {
     if (!reason.trim()) {
-      toast.error('Motivul programării este obligatoriu.');
+      toast.error(t('appointments.valReason'));
       return;
     }
     setWizardStep(6);
@@ -253,7 +258,7 @@ export const AppointmentsPage: React.FC = () => {
 
   const handleSubmitAppointment = async () => {
     if (!selectedSlot || !selectedDoctorInstitutionId || !specialtyId || !date || !reason.trim()) {
-      toast.error('Completează toate câmpurile obligatorii.');
+      toast.error(t('appointments.valAllFields'));
       return;
     }
     setSubmitting(true);
@@ -267,7 +272,7 @@ export const AppointmentsPage: React.FC = () => {
         notes: notes.trim() || undefined
       };
       await http.post('/api/appointments', payload);
-      toast.success('Programarea a fost creată cu succes.');
+      toast.success(t('appointments.successCreate'));
       setWizardOpen(false);
       setSpecialtyId('');
       setSelectedDoctorInstitutionId('');
@@ -278,7 +283,7 @@ export const AppointmentsPage: React.FC = () => {
       void loadAppointments('upcoming');
       setScope('upcoming');
     } catch (err: any) {
-      const msg = err?.normalizedMessage || err?.message || 'Nu am putut crea programarea.';
+      const msg = err?.normalizedMessage || err?.message || t('appointments.errCreate');
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -286,25 +291,27 @@ export const AppointmentsPage: React.FC = () => {
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
-    if (!window.confirm('Sigur vrei să anulezi această programare?')) return;
+    if (!window.confirm(t('appointments.confirmCancel'))) return;
     try {
       await http.post(`/api/appointments/${appointmentId}/cancel-by-patient`, { reason: '' });
-      toast.success('Programarea a fost anulată.');
+      toast.success(t('appointments.successCancel'));
       void loadAppointments(scope);
     } catch (err: any) {
-      const msg = err?.normalizedMessage || err?.message || 'Nu am putut anula programarea.';
+      const msg = err?.normalizedMessage || err?.message || t('appointments.errCancel');
       toast.error(msg);
     }
   };
 
   const renderStatusBadge = (status: string) => {
     const base = 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium';
-    if (status === 'Confirmed') return <span className={`${base} bg-emerald-50 text-emerald-700`}>Confirmată</span>;
-    if (status === 'Completed') return <span className={`${base} bg-sky-50 text-sky-700`}>Finalizată</span>;
+    if (status === 'Confirmed')
+      return <span className={`${base} bg-emerald-50 text-emerald-700`}>{t('appointments.statusConfirmed')}</span>;
+    if (status === 'Completed')
+      return <span className={`${base} bg-sky-50 text-sky-700`}>{t('appointments.statusCompleted')}</span>;
     if (status === 'CancelledByPatient')
-      return <span className={`${base} bg-slate-50 text-slate-600`}>Anulată de pacient</span>;
+      return <span className={`${base} bg-slate-50 text-slate-600`}>{t('appointments.statusCancelledByPatient')}</span>;
     if (status === 'CancelledByDoctor')
-      return <span className={`${base} bg-red-50 text-red-700`}>Anulată de doctor</span>;
+      return <span className={`${base} bg-red-50 text-red-700`}>{t('appointments.statusCancelledByDoctor')}</span>;
     return <span className={`${base} bg-slate-50 text-slate-600`}>{status}</span>;
   };
 
@@ -312,18 +319,17 @@ export const AppointmentsPage: React.FC = () => {
     if (loadingList) {
       return (
         <Card className="p-6">
-          <p className="text-sm text-slate-600">Se încarcă programările...</p>
+          <p className="text-sm text-slate-600">{t('appointments.loadingList')}</p>
         </Card>
       );
     }
 
     if (appointments.length === 0) {
+      const emptyKey = `appointments.empty${scope.charAt(0).toUpperCase()}${scope.slice(1)}`;
       return (
         <Card className="flex flex-col items-center justify-center p-10 text-center">
-          <p className="text-base font-medium text-slate-800">Nu există programări {currentScopeLabel.toLowerCase()}.</p>
-          <p className="mt-2 max-w-md text-sm text-slate-600">
-            Poți crea o programare nouă apăsând pe butonul „Programează-te”.
-          </p>
+          <p className="text-base font-medium text-slate-800">{t(emptyKey)}</p>
+          <p className="mt-2 max-w-md text-sm text-slate-600">{t('appointments.emptyHint')}</p>
         </Card>
       );
     }
@@ -346,12 +352,12 @@ export const AppointmentsPage: React.FC = () => {
               </div>
               {a.reason && (
                 <div className="text-xs text-slate-700">
-                  <span className="font-medium">Motiv:</span> {a.reason}
+                  <span className="font-medium">{t('appointments.reasonLabel')}</span> {a.reason}
                 </div>
               )}
               {a.cancellationReason && (
                 <div className="text-xs text-slate-600">
-                  <span className="font-medium">Motiv anulare:</span> {a.cancellationReason}
+                  <span className="font-medium">{t('appointments.cancellationReasonLabel')}</span> {a.cancellationReason}
                 </div>
               )}
             </div>
@@ -359,7 +365,7 @@ export const AppointmentsPage: React.FC = () => {
               {renderStatusBadge(a.status)}
               {a.status === 'Confirmed' && scope !== 'history' && scope !== 'cancelled' && (
                 <Button variant="secondary" onClick={() => handleCancelAppointment(a.appointmentId)}>
-                  Anulează
+                  {t('appointments.cancel')}
                 </Button>
               )}
             </div>
@@ -375,17 +381,17 @@ export const AppointmentsPage: React.FC = () => {
     if (wizardStep === 1) {
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Alege specialitatea</h2>
-          <p className="text-sm text-slate-600">Selectează specialitatea pentru care vrei să te programezi.</p>
+          <h2 className="text-lg font-semibold text-slate-900">{t('appointments.step1Title')}</h2>
+          <p className="text-sm text-slate-600">{t('appointments.step1Desc')}</p>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Specialitate</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t('appointments.specialtyLabel')}</label>
             <select
               className="block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               value={specialtyId}
               onChange={(e) => setSpecialtyId(e.target.value)}
               onFocus={() => void loadSpecialtiesOnce()}
             >
-              <option value="">{specialtiesLoading ? 'Se încarcă...' : 'Selectează'}</option>
+              <option value="">{specialtiesLoading ? t('appointments.loading') : t('appointments.select')}</option>
               {!specialtiesLoading &&
                 specialties.map((s) => (
                   <option key={s.id} value={s.id}>
@@ -396,10 +402,10 @@ export const AppointmentsPage: React.FC = () => {
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={closeWizard}>
-              Renunță
+              {t('appointments.cancelBtn')}
             </Button>
             <Button type="button" onClick={handleNextFromStep1}>
-              Următorul pas
+              {t('appointments.nextStep')}
             </Button>
           </div>
         </div>
@@ -409,16 +415,12 @@ export const AppointmentsPage: React.FC = () => {
     if (wizardStep === 2) {
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-salte-900">Alege doctorul</h2>
-          <p className="text-sm text-slate-600">
-            Alege unul dintre doctorii disponibili pentru specialitatea selectată.
-          </p>
+          <h2 className="text-lg font-semibold text-salte-900">{t('appointments.step2Title')}</h2>
+          <p className="text-sm text-slate-600">{t('appointments.step2Desc')}</p>
           {doctorsLoading ? (
-            <p className="text-sm text-slate-600">Se încarcă doctorii...</p>
+            <p className="text-sm text-slate-600">{t('appointments.loadingDoctors')}</p>
           ) : doctors.length === 0 ? (
-            <p className="text-sm text-slate-600">
-              Nu am găsit doctori pentru această specialitate. Încearcă altă specialitate sau altă dată.
-            </p>
+            <p className="text-sm text-slate-600">{t('appointments.noDoctors')}</p>
           ) : (
             <div className="flex flex-col gap-3 max-h-80 overflow-y-auto">
               {doctors.map((d) => (
@@ -442,7 +444,7 @@ export const AppointmentsPage: React.FC = () => {
                     </div>
                     {d.hasAvailabilityOnDate && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                        Are sloturi libere
+                        {t('appointments.hasFreeSlots')}
                       </span>
                     )}
                   </div>
@@ -452,14 +454,14 @@ export const AppointmentsPage: React.FC = () => {
           )}
           <div className="flex justify-between gap-2">
             <Button type="button" variant="secondary" onClick={() => setWizardStep(1)}>
-              Înapoi
+              {t('appointments.back')}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={closeWizard}>
-                Renunță
+                {t('appointments.cancelBtn')}
               </Button>
               <Button type="button" onClick={handleNextFromStep2}>
-                Următorul pas
+                {t('appointments.nextStep')}
               </Button>
             </div>
           </div>
@@ -470,12 +472,10 @@ export const AppointmentsPage: React.FC = () => {
     if (wizardStep === 3) {
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Alege data</h2>
-          <p className="text-sm text-slate-600">
-            Selectează data în care dorești să ai consultația. Nu poți alege date din trecut.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">{t('appointments.step3Title')}</h2>
+          <p className="text-sm text-slate-600">{t('appointments.step3Desc')}</p>
           <div className="space-y-2">
-            <label className="mb-1 block text-sm font-medium text-slate-700">Dată</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t('appointments.dateLabel')}</label>
             <div className="relative" ref={datePickerRef}>
               <button
                 type="button"
@@ -494,7 +494,7 @@ export const AppointmentsPage: React.FC = () => {
                   }
                 }}
               >
-                {date ? new Date(date).toLocaleDateString('ro-RO') : 'Selectează data'}
+                {date ? new Date(date).toLocaleDateString(localeForLang(i18n.language)) : t('appointments.selectDate')}
               </button>
 
               {datePickerOpen && (
@@ -510,7 +510,7 @@ export const AppointmentsPage: React.FC = () => {
                       {'<'}
                     </button>
                     <p className="text-sm font-semibold capitalize text-slate-800">
-                      {monthFormatterRo.format(dateMonthCursor)}
+                      {monthFormatter.format(dateMonthCursor)}
                     </p>
                     <button
                       type="button"
@@ -524,7 +524,7 @@ export const AppointmentsPage: React.FC = () => {
                   </div>
 
                   <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500">
-                    {WEEK_DAYS_RO.map((label) => (
+                    {weekDays.map((label) => (
                       <span key={label} className="py-1">
                         {label}
                       </span>
@@ -569,14 +569,14 @@ export const AppointmentsPage: React.FC = () => {
           </div>
           <div className="flex justify-between gap-2">
             <Button type="button" variant="secondary" onClick={() => setWizardStep(2)}>
-              Înapoi
+              {t('appointments.back')}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={closeWizard}>
-                Renunță
+                {t('appointments.cancelBtn')}
               </Button>
               <Button type="button" onClick={handleNextFromStep3}>
-                Vezi intervalele disponibile
+                {t('appointments.viewSlots')}
               </Button>
             </div>
           </div>
@@ -587,16 +587,12 @@ export const AppointmentsPage: React.FC = () => {
     if (wizardStep === 4) {
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Alege intervalul orar</h2>
-          <p className="text-sm text-slate-600">
-            Alege unul dintre intervalele disponibile pentru data selectată.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">{t('appointments.step4Title')}</h2>
+          <p className="text-sm text-slate-600">{t('appointments.step4Desc')}</p>
           {slotsLoading ? (
-            <p className="text-sm text-slate-600">Se încarcă intervalele...</p>
+            <p className="text-sm text-slate-600">{t('appointments.loadingSlots')}</p>
           ) : slots.length === 0 ? (
-            <p className="text-sm text-slate-600">
-              Nu există sloturi disponibile pentru data selectată. Încearcă o altă dată.
-            </p>
+            <p className="text-sm text-slate-600">{t('appointments.noSlots')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {slots.map((s) => (
@@ -617,14 +613,14 @@ export const AppointmentsPage: React.FC = () => {
           )}
           <div className="flex justify-between gap-2">
             <Button type="button" variant="secondary" onClick={() => setWizardStep(3)}>
-              Înapoi
+              {t('appointments.back')}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={closeWizard}>
-                Renunță
+                {t('appointments.cancelBtn')}
               </Button>
               <Button type="button" onClick={handleNextFromStep4}>
-                Următorul pas
+                {t('appointments.nextStep')}
               </Button>
             </div>
           </div>
@@ -635,33 +631,31 @@ export const AppointmentsPage: React.FC = () => {
     if (wizardStep === 5) {
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Motivul programării</h2>
-          <p className="text-sm text-slate-600">
-            Descrie pe scurt motivul consultației, pentru ca doctorul să se poată pregăti.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">{t('appointments.step5Title')}</h2>
+          <p className="text-sm text-slate-600">{t('appointments.step5Desc')}</p>
           <Input
-            label="Motivul programării"
-            placeholder="Ex: consultație de control, dureri toracice, rezultate analize..."
+            label={t('appointments.reasonFieldLabel')}
+            placeholder={t('appointments.reasonPlaceholder')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             required
           />
           <Input
-            label="Note suplimentare (opțional)"
-            placeholder="Ex: prefer orele de dimineață, alergii cunoscute..."
+            label={t('appointments.notesFieldLabel')}
+            placeholder={t('appointments.notesPlaceholder')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
           <div className="flex justify-between gap-2">
             <Button type="button" variant="secondary" onClick={() => setWizardStep(4)}>
-              Înapoi
+              {t('appointments.back')}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={closeWizard}>
-                Renunță
+                {t('appointments.cancelBtn')}
               </Button>
               <Button type="button" onClick={handleNextFromStep5}>
-                Vezi rezumatul
+                {t('appointments.viewSummary')}
               </Button>
             </div>
           </div>
@@ -672,47 +666,45 @@ export const AppointmentsPage: React.FC = () => {
     if (wizardStep === 6 && selectedSlot && currentDoctor) {
       return (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-900">Confirmă programarea</h2>
-          <p className="text-sm text-slate-600">
-            Verifică detaliile programării înainte de a o trimite spre confirmare.
-          </p>
+          <h2 className="text-lg font-semibold text-slate-900">{t('appointments.step6Title')}</h2>
+          <p className="text-sm text-slate-600">{t('appointments.step6Desc')}</p>
           <Card className="p-4 space-y-2 bg-slate-50 border-slate-200">
             <div className="text-sm">
-              <span className="font-medium text-slate-700">Doctor:</span>{' '}
+              <span className="font-medium text-slate-700">{t('appointments.summaryDoctor')}</span>{' '}
               <span className="text-slate-900">{currentDoctor.doctorFullName}</span>
             </div>
             <div className="text-sm text-slate-700">
-              <span className="font-medium">Specialitate:</span> {currentDoctor.specialtyName}
+              <span className="font-medium">{t('appointments.summarySpecialty')}</span> {currentDoctor.specialtyName}
             </div>
             <div className="text-sm text-slate-700">
-              <span className="font-medium">Instituție medicală:</span> {currentDoctor.institutionName}
+              <span className="font-medium">{t('appointments.summaryInstitution')}</span> {currentDoctor.institutionName}
               {currentDoctor.institutionCity ? ` · ${currentDoctor.institutionCity}` : ''}
             </div>
             <div className="text-sm text-slate-700">
-              <span className="font-medium">Dată:</span> {selectedSlot.date}
+              <span className="font-medium">{t('appointments.summaryDate')}</span> {selectedSlot.date}
             </div>
             <div className="text-sm text-slate-700">
-              <span className="font-medium">Interval orar:</span> {selectedSlot.label}
+              <span className="font-medium">{t('appointments.summarySlot')}</span> {selectedSlot.label}
             </div>
             <div className="text-sm text-slate-700">
-              <span className="font-medium">Motiv:</span> {reason}
+              <span className="font-medium">{t('appointments.summaryReason')}</span> {reason}
             </div>
             {notes.trim() && (
               <div className="text-sm text-slate-700">
-                <span className="font-medium">Note:</span> {notes}
+                <span className="font-medium">{t('appointments.summaryNotes')}</span> {notes}
               </div>
             )}
           </Card>
           <div className="flex justify-between gap-2">
             <Button type="button" variant="secondary" onClick={() => setWizardStep(5)}>
-              Înapoi
+              {t('appointments.back')}
             </Button>
             <div className="flex gap-2">
               <Button type="button" variant="secondary" onClick={closeWizard}>
-                Renunță
+                {t('appointments.cancelBtn')}
               </Button>
               <Button type="button" onClick={handleSubmitAppointment} loading={submitting}>
-                Confirmă programarea
+                {t('appointments.confirmBook')}
               </Button>
             </div>
           </div>
@@ -727,22 +719,20 @@ export const AppointmentsPage: React.FC = () => {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Programările mele</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Gestionează-ți programările la doctor și creează consultații noi.
-          </p>
+          <h1 className="text-2xl font-semibold text-slate-900">{t('appointments.pageTitle')}</h1>
+          <p className="mt-1 text-sm text-slate-600">{t('appointments.pageSubtitle')}</p>
         </div>
         <Button type="button" onClick={openWizard}>
-          Programează-te
+          {t('appointments.bookButton')}
         </Button>
       </div>
 
       <Tabs
         tabs={[
-          { id: 'today', label: 'Azi' },
-          { id: 'upcoming', label: 'Viitoare' },
-          { id: 'history', label: 'Istoric' },
-          { id: 'cancelled', label: 'Anulate' }
+          { id: 'today', label: t('appointments.tabToday') },
+          { id: 'upcoming', label: t('appointments.tabUpcoming') },
+          { id: 'history', label: t('appointments.tabHistory') },
+          { id: 'cancelled', label: t('appointments.tabCancelled') }
         ]}
         activeId={scope}
         onChange={(id) => setScope(id as Scope)}
@@ -750,7 +740,7 @@ export const AppointmentsPage: React.FC = () => {
 
       {renderList()}
 
-      <Modal open={wizardOpen} onOpenChange={setWizardOpen} title="Programare nouă">
+      <Modal open={wizardOpen} onOpenChange={setWizardOpen} title={t('appointments.wizardTitle')}>
         {renderWizardContent()}
       </Modal>
     </div>

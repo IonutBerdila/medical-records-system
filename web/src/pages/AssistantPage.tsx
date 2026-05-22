@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { useTranslation } from "react-i18next";
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
@@ -22,14 +23,14 @@ interface ChatTurn {
   data?: AssistantChatResponse;
 }
 
-const EXAMPLE_PROMPTS = [
-  "Mă doare stomacul după ce mănânc.",
-  "Am dureri de cap frecvente.",
-  "Am o problemă a pielii.",
-];
-
 export const AssistantPage: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+  const examplePrompts = [
+    t("assistant.example1"),
+    t("assistant.example2"),
+    t("assistant.example3"),
+  ];
   const [turns, setTurns] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -89,15 +90,13 @@ export const AssistantPage: React.FC = () => {
         e.response?.data?.title;
       let msg: string;
       if (status === 503) {
-        msg =
-          apiMsg ||
-          "Asistentul AI este indisponibil momentan. Încearcă din nou mai târziu.";
+        msg = apiMsg || t("assistant.errorUnavailable");
       } else if (status === 400) {
-        msg = apiMsg || "Mesajul nu este valid.";
+        msg = apiMsg || t("assistant.errorInvalid");
       } else if (status === 429) {
-        msg = "Prea multe cereri într-un interval scurt. Așteaptă puțin și reîncearcă.";
+        msg = t("assistant.errorRateLimit");
       } else {
-        msg = apiMsg || e.message || "A apărut o eroare. Încearcă din nou.";
+        msg = apiMsg || e.message || t("assistant.errorGeneric");
       }
       setError(msg);
       toast.error(msg);
@@ -146,7 +145,7 @@ export const AssistantPage: React.FC = () => {
               <IconAlert />
             </span>
             <div>
-              <p className="font-semibold">Atenție</p>
+              <p className="font-semibold">{t("assistant.warning")}</p>
               <p className="mt-0.5">{data.safetyNotice}</p>
             </div>
           </div>
@@ -157,7 +156,7 @@ export const AssistantPage: React.FC = () => {
         {data.clarificationQuestions.length > 0 && (
           <div>
             <p className="mb-1 text-sm font-semibold text-slate-800">
-              Întrebări de clarificare
+              {t("assistant.clarificationQuestions")}
             </p>
             <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
               {data.clarificationQuestions.map((q, i) => (
@@ -170,7 +169,7 @@ export const AssistantPage: React.FC = () => {
         {data.suggestedSpecialties.length > 0 && (
           <div>
             <p className="mb-1.5 text-sm font-semibold text-slate-800">
-              Specialități recomandate
+              {t("assistant.recommendedSpecialties")}
             </p>
             <div className="flex flex-wrap gap-1.5">
               {data.suggestedSpecialties.map((s, i) => (
@@ -185,7 +184,7 @@ export const AssistantPage: React.FC = () => {
         {data.suggestedDoctors.length > 0 && (
           <div>
             <p className="mb-1.5 text-sm font-semibold text-slate-800">
-              Doctori disponibili
+              {t("assistant.availableDoctors")}
             </p>
             <div className="space-y-2">
               {data.suggestedDoctors.map((doc) => (
@@ -195,7 +194,7 @@ export const AssistantPage: React.FC = () => {
                 >
                   <div className="min-w-0">
                     <p className="font-medium text-slate-900">
-                      Dr. {doc.fullName}
+                      {t("assistant.doctorPrefix")} {doc.fullName}
                     </p>
                     <p className="text-sm text-slate-600">{doc.specialty}</p>
                     <p className="text-xs text-slate-500">
@@ -205,9 +204,9 @@ export const AssistantPage: React.FC = () => {
                     </p>
                     <div className="mt-1">
                       {doc.hasAvailabilityToday ? (
-                        <Badge variant="success">Disponibil azi</Badge>
+                        <Badge variant="success">{t("assistant.availableToday")}</Badge>
                       ) : (
-                        <Badge variant="default">Fără sloturi azi</Badge>
+                        <Badge variant="default">{t("assistant.noSlotsToday")}</Badge>
                       )}
                     </div>
                   </div>
@@ -217,7 +216,7 @@ export const AssistantPage: React.FC = () => {
                     className="text-sm"
                     onClick={() => goToAppointment(doc)}
                   >
-                    Programează
+                    {t("assistant.book")}
                   </Button>
                 </div>
               ))}
@@ -239,13 +238,9 @@ export const AssistantPage: React.FC = () => {
       <Card className="overflow-hidden">
         <div className="border-b border-slate-200 px-6 py-4">
           <h2 className="text-lg font-semibold text-slate-900">
-            Asistent AI de orientare medicală
+            {t("assistant.title")}
           </h2>
-          <p className="mt-0.5 text-sm text-slate-600">
-            Descrie pe scurt simptomele sau întrebarea ta. Asistentul oferă
-            orientare generală și te îndrumă către tipul potrivit de specialist.
-            Nu pune diagnostice și nu înlocuiește consultul medical.
-          </p>
+          <p className="mt-0.5 text-sm text-slate-600">{t("assistant.intro")}</p>
         </div>
 
         <div
@@ -255,10 +250,10 @@ export const AssistantPage: React.FC = () => {
           {turns.length === 0 && (
             <div className="mx-auto max-w-md py-6 text-center">
               <p className="text-sm text-slate-600">
-                Poți începe cu un exemplu:
+                {t("assistant.startExample")}
               </p>
               <div className="mt-3 flex flex-wrap justify-center gap-2">
-                {EXAMPLE_PROMPTS.map((p) => (
+                {examplePrompts.map((p) => (
                   <button
                     key={p}
                     type="button"
@@ -300,7 +295,7 @@ export const AssistantPage: React.FC = () => {
             <div className="flex justify-start">
               <div className="flex items-center gap-2 rounded-2xl rounded-bl-sm border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                Asistentul analizează mesajul…
+                {t("assistant.analyzing")}
               </div>
             </div>
           )}
@@ -322,12 +317,12 @@ export const AssistantPage: React.FC = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Scrie un mesaj… (Enter pentru a trimite, Shift+Enter pentru rând nou)"
+              placeholder={t("assistant.inputPlaceholder")}
               disabled={loading}
             />
           </div>
           <Button type="submit" loading={loading} disabled={!input.trim()}>
-            Trimite
+            {t("assistant.send")}
           </Button>
         </form>
       </Card>

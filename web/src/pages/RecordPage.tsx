@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -59,6 +60,7 @@ function toEmergencyContacts(dto: MedicalRecordDto): EmergencyContactDto[] {
 }
 
 export const RecordPage: React.FC = () => {
+  const { t } = useTranslation();
   const [record, setRecord] = useState<MedicalRecordDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,7 @@ export const RecordPage: React.FC = () => {
               ?.message ||
             (err as { response?: { data?: { message?: string; title?: string } } })?.response?.data?.title ||
             (err as { message?: string })?.message ||
-            'Eroare la încărcare';
+            t('record.errLoad');
           toast.error(msg);
         }
       })
@@ -112,7 +114,7 @@ export const RecordPage: React.FC = () => {
     }
     const ok = isValidPhone(val);
     setPhoneErrors((prev) =>
-      ok ? (() => { const n = { ...prev }; delete n[idx]; return n; })() : { ...prev, [idx]: 'Minim 8 cifre' }
+      ok ? (() => { const n = { ...prev }; delete n[idx]; return n; })() : { ...prev, [idx]: t('record.phoneMin') }
     );
     return ok;
   };
@@ -163,14 +165,14 @@ export const RecordPage: React.FC = () => {
       };
       const updated = await updateMyRecord(payload);
       setRecord(updated);
-      toast.success('Fișa medicală a fost salvată.');
+      toast.success(t('record.toastSaved'));
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { message?: string; title?: string } }; message?: string })?.response?.data
           ?.message ||
         (err as { response?: { data?: { message?: string } } })?.response?.data?.title ||
         (err as { message?: string })?.message ||
-        'Eroare la salvare';
+        t('record.errSave');
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -189,7 +191,7 @@ export const RecordPage: React.FC = () => {
     <div className="flex flex-col gap-5">
       {record?.updatedAtUtc && (
         <p className="text-xs text-slate-400">
-          Ultima actualizare: {formatLastUpdated(record.updatedAtUtc)}
+          {t('record.lastUpdated')} {formatLastUpdated(record.updatedAtUtc)}
         </p>
       )}
 
@@ -197,11 +199,11 @@ export const RecordPage: React.FC = () => {
         <form className="flex flex-col gap-6" onSubmit={handleSave}>
           {/* Section 1: Informații critice */}
           <section>
-            <h2 className="mb-4 text-base font-semibold text-slate-800">Informații critice</h2>
+            <h2 className="mb-4 text-base font-semibold text-slate-800">{t('record.criticalInfo')}</h2>
             <div className="flex flex-col gap-4">
               <div>
                 <label htmlFor="blood-type" className="mb-1 block text-sm font-medium text-slate-700">
-                  Grupa sanguină
+                  {t('record.bloodType')}
                 </label>
                 <select
                   id="blood-type"
@@ -217,26 +219,26 @@ export const RecordPage: React.FC = () => {
                 </select>
               </div>
               <TagInput
-                label="Alergii"
+                label={t('record.allergies')}
                 value={form.allergies ?? []}
                 onChange={(allergies) => setForm({ ...form, allergies })}
-                placeholder="Adaugă alergie…"
+                placeholder={t('record.allergiesPlaceholder')}
                 maxTags={30}
                 maxLengthPerTag={60}
               />
               <TagInput
-                label="Reacții adverse la medicamente"
+                label={t('record.adverseReactions')}
                 value={form.adverseDrugReactions ?? []}
                 onChange={(adverseDrugReactions) => setForm({ ...form, adverseDrugReactions })}
-                placeholder="Adaugă reacție…"
+                placeholder={t('record.adverseReactionsPlaceholder')}
                 maxTags={30}
                 maxLengthPerTag={60}
               />
               <TagInput
-                label="Afecțiuni cronice"
+                label={t('record.chronicConditions')}
                 value={form.chronicConditions ?? []}
                 onChange={(chronicConditions) => setForm({ ...form, chronicConditions })}
-                placeholder="Adaugă afecțiune…"
+                placeholder={t('record.chronicConditionsPlaceholder')}
                 maxTags={30}
                 maxLengthPerTag={60}
               />
@@ -245,7 +247,7 @@ export const RecordPage: React.FC = () => {
 
           {/* Section 2: Medicație curentă */}
           <section>
-            <h2 className="mb-4 text-base font-semibold text-slate-800">Medicație curentă</h2>
+            <h2 className="mb-4 text-base font-semibold text-slate-800">{t('record.currentMedications')}</h2>
             <Textarea
               value={form.currentMedications ?? ''}
               onChange={(e) => setForm({ ...form, currentMedications: e.target.value })}
@@ -257,9 +259,9 @@ export const RecordPage: React.FC = () => {
 
           {/* Section 3: Istoric medical relevant */}
           <section>
-            <h2 className="mb-4 text-base font-semibold text-slate-800">Istoric medical relevant</h2>
+            <h2 className="mb-4 text-base font-semibold text-slate-800">{t('record.relevantHistory')}</h2>
             <Textarea
-              label="Intervenții / spitalizări importante"
+              label={t('record.surgeries')}
               value={form.majorSurgeriesHospitalizations ?? ''}
               onChange={(e) => setForm({ ...form, majorSurgeriesHospitalizations: e.target.value })}
               rows={4}
@@ -271,7 +273,7 @@ export const RecordPage: React.FC = () => {
           {/* Section 4: Contact de urgență */}
           <section>
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="text-base font-semibold text-slate-800">Contact de urgență</h2>
+              <h2 className="text-base font-semibold text-slate-800">{t('record.emergencyContact')}</h2>
               <Button
                 type="button"
                 variant="secondary"
@@ -279,7 +281,7 @@ export const RecordPage: React.FC = () => {
                 className="shrink-0 text-sm"
               >
                 <span className="mr-1.5">+</span>
-                Adaugă
+                {t('record.add')}
               </Button>
             </div>
             <div className="flex flex-col gap-4">
@@ -291,7 +293,7 @@ export const RecordPage: React.FC = () => {
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       <Input
-                        label="Contact urgență (nume)"
+                        label={t('record.contactName')}
                         value={contact.name ?? ''}
                         onChange={(e) => updateContact(idx, 'name', e.target.value)}
                       />
@@ -300,7 +302,7 @@ export const RecordPage: React.FC = () => {
                           htmlFor={`emergency-relation-${idx}`}
                           className="mb-1 block text-sm font-medium text-slate-700"
                         >
-                          Relație
+                          {t('record.relation')}
                         </label>
                         <select
                           id={`emergency-relation-${idx}`}
@@ -308,7 +310,7 @@ export const RecordPage: React.FC = () => {
                           onChange={(e) => updateContact(idx, 'relation', e.target.value)}
                           className="h-11 w-full rounded-xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition-colors focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         >
-                          <option value="">— Selectează —</option>
+                          <option value="">{t('record.selectPlaceholder')}</option>
                           {EMERGENCY_RELATIONS.map((rel) => (
                             <option key={rel} value={rel}>
                               {rel}
@@ -318,7 +320,7 @@ export const RecordPage: React.FC = () => {
                       </div>
                       <div>
                         <Input
-                          label="Contact urgență (telefon)"
+                          label={t('record.contactPhone')}
                           value={contact.phone ?? ''}
                           onChange={(e) => {
                             updateContact(idx, 'phone', e.target.value);
@@ -335,7 +337,7 @@ export const RecordPage: React.FC = () => {
                         type="button"
                         onClick={() => removeContact(idx)}
                         className="mt-8 rounded-lg p-2 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-                        aria-label="Șterge contact"
+                        aria-label={t('record.deleteContact')}
                       >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -350,7 +352,7 @@ export const RecordPage: React.FC = () => {
 
           <div className="border-t border-slate-200 pt-4">
             <Button type="submit" loading={saving} disabled={saving}>
-              Salvează
+              {t('common.save')}
             </Button>
           </div>
         </form>
